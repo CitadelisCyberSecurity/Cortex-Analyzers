@@ -43,15 +43,15 @@ Every new analyzer must ship with unit tests that run in CI.
 ```
 templates/
 └── analyzer/
-    ├── __NAME__.json
-    ├── __name__.py
+    ├── __TPL_NAME__.json
+    ├── __TPL_SLUG__.py
     ├── requirements.txt
     ├── README.md
     ├── .dockerignore
     ├── assets/.gitkeep
     ├── tests/
     │   ├── conftest.py
-    │   ├── test___name__.py
+    │   ├── test___TPL_SLUG__.py
     │   ├── requirements-test.txt
     │   └── fixtures/sample_response.json
     └── thehive-templates/
@@ -59,6 +59,8 @@ templates/
         └── short.html
 
 utils/new-analyzer.py
+utils/tests/test_new_analyzer.py
+utils/tests/requirements-test.txt
 .github/workflows/tests.yml
 analyzers/AbuseIPDB/tests/          (new)
 analyzers/AbuseIPDB/.dockerignore   (new)
@@ -68,21 +70,22 @@ README.md                           (add link to the guide)
 
 ## Placeholder tokens
 
-Plain string replacement, no templating engine. Tokens use double
-underscores so they never collide with Angular `{{ }}` expressions in the
-TheHive templates.
+Plain string replacement, no templating engine. Tokens use a `__TPL_`
+prefix so they never collide with Angular `{{ }}` expressions in the
+TheHive templates or with Python dunders (`__name__`, `__main__`,
+`__init__`).
 
 | Token | Example (`--name Shodan`) | Used in |
 |---|---|---|
-| `__NAME__` | `Shodan` | class name, flavor `name`, `baseConfig`, taxonomy namespace, file name of the JSON |
-| `__name__` | `shodan` | Python file name, `command` path, test file name |
-| `__DATATYPES__` | `["ip", "domain"]` | flavor `dataTypeList` (JSON array literal) |
-| `__AUTHOR__` | `Citadelis` | flavor `author` |
-| `__VERSION__` | `1.0` | flavor `version` |
+| `__TPL_NAME__` | `Shodan` | class name, flavor `name`, `baseConfig`, taxonomy namespace, file name of the JSON |
+| `__TPL_SLUG__` | `shodan` | Python file name, `command` path, test file name |
+| `__TPL_DATATYPES__` | `["ip", "domain"]` | flavor `dataTypeList` (JSON array literal) |
+| `__TPL_AUTHOR__` | `Citadelis` | flavor `author` |
+| `__TPL_VERSION__` | `1.0` | flavor `version` |
 
-Path names containing tokens are renamed as well (`__NAME__.json` →
-`Shodan.json`, `__name__.py` → `shodan.py`,
-`test___name__.py` → `test_shodan.py`).
+Path names containing tokens are renamed as well (`__TPL_NAME__.json` →
+`Shodan.json`, `__TPL_SLUG__.py` → `shodan.py`,
+`test___TPL_SLUG__.py` → `test_shodan.py`).
 
 ## Scaffolding script — `utils/new-analyzer.py`
 
@@ -99,25 +102,28 @@ Behavior:
 2. Validates each data type against the Cortex standard list (`ip`, `domain`,
    `fqdn`, `url`, `hash`, `mail`, `filename`, `file`, `uri_path`,
    `user-agent`, `registry`, `regexp`, `other`, `autonomous-system`, `mail_subject`).
-3. Fails without writing anything if `analyzers/<Name>/` exists, or, with
+3. Validates `--version`: digits and dots only (e.g. `1.0`).
+4. Fails without writing anything if `analyzers/<Name>/` exists, or, with
    `--with-thehive-templates`, if `thehive-templates/<Name>_<ver>/` exists.
-4. Copies `templates/analyzer/` (excluding its `thehive-templates/` subfolder)
+5. Copies `templates/analyzer/` (excluding its `thehive-templates/` subfolder)
    to `analyzers/<Name>/`, renaming paths and replacing tokens in every text
    file.
-5. With `--with-thehive-templates`, copies the skeleton's `long.html` and
+6. With `--with-thehive-templates`, copies the skeleton's `long.html` and
    `short.html` to `thehive-templates/<Name>_<version with "." → "_">/` with
    the same token replacement.
-6. Prints the created paths and next steps (fill TODOs, record a fixture, run
+7. Prints the created paths and next steps (fill TODOs, record a fixture, run
    `pytest`).
 
 Defaults: `--author Citadelis`, `--version 1.0`, `--repo-root` = parent of
-`utils/`. Standard library only.
+`utils/`. The template is always read from the script's own repository;
+`--repo-root` only sets where output is written (used by tests). Standard
+library only.
 
-## Analyzer skeleton — `__name__.py`
+## Analyzer skeleton — `__TPL_SLUG__.py`
 
 Structure, mirroring AbuseIPDB with common concerns pre-solved:
 
-- Class constants: `BASE_URL`, `NAMESPACE = "__NAME__"`,
+- Class constants: `BASE_URL`, `NAMESPACE = "__TPL_NAME__"`,
   `MALICIOUS_THRESHOLD = 75`, `SUSPICIOUS_THRESHOLD = 1`.
 - `__init__`: reads `config.key` (required), `config.timeout` (default 30);
   creates a `requests.Session` with auth header and a `User-Agent`.
@@ -141,7 +147,7 @@ Structure, mirroring AbuseIPDB with common concerns pre-solved:
   taxonomy; a not-found result emits `safe` / `Found` / `False`.
 - `artifacts(raw)`: returns `build_artifact(...)` entries tagged
   `[NAMESPACE]`, de-duplicated and sorted.
-- `if __name__ == "__main__": __NAME__Analyzer().run()`
+- `if __name__ == "__main__": __TPL_NAME__Analyzer().run()`
 
 Every service-specific spot is marked `# TODO:`. The skeleton is a working
 example against an invented API shape, so it is runnable and testable as
@@ -156,10 +162,10 @@ generated.
   context only.
 - Every successful run emits at least one taxonomy.
 
-## Flavor definition — `__NAME__.json`
+## Flavor definition — `__TPL_NAME__.json`
 
-Based on AbuseIPDB's JSON, with: `name`/`baseConfig` = `__NAME__`,
-`command` = `__NAME__/__name__.py`, `dataTypeList` = `__DATATYPES__`,
+Based on AbuseIPDB's JSON, with: `name`/`baseConfig` = `__TPL_NAME__`,
+`command` = `__TPL_NAME__/__TPL_SLUG__.py`, `dataTypeList` = `__TPL_DATATYPES__`,
 `license` = `AGPL-V3`, `url` = the Citadelis repo URL;
 configuration items `key` (string, required) and `timeout`
 (number, optional, default 30); `config` with `check_tlp: true`,
@@ -177,10 +183,12 @@ The generated JSON must validate against `utils/flavors/flavor_schema.json`.
 - `short.html`: identical to AbuseIPDB's taxonomy label list (generic, works
   as-is), with the `suspicious` → `label-warning` and `info` → `label-info`
   mappings added.
-- `long.html`: a minimal panel showing the observable, a verdict-coloured
-  heading driven by the `summary` taxonomies, a key/value table of the
-  report's top-level fields, and the standard error block from AbuseIPDB's
-  template. It contains `__NAME__` tokens for the title.
+- `long.html`: a minimal panel showing the observable, a "not found"
+  message when `content.found` is false, otherwise a key/value list of
+  `content.data`, plus the standard error block from AbuseIPDB's template.
+  (In a long template `content` is the full report; taxonomies are not
+  available there, so the heading is not verdict-coloured.) It contains
+  `__TPL_NAME__` tokens for the title.
 
 ## Tests
 
@@ -205,18 +213,23 @@ The harness exercises the real `cortexutils` file I/O path, so the returned
 dict is exactly what Cortex (and therefore Shuffle) receives, including
 `summary` and `artifacts`.
 
-HTTP is mocked with the `responses` library; tests use
-`responses.activate` (or the `responses` fixture) so any unmocked request
-fails the test.
+The harness is generic: it locates the program through the flavor JSON's
+`command` field and finds the `Analyzer` subclass by introspection, so the
+same `conftest.py` is copied unchanged into AbuseIPDB.
 
-### Generated test cases — `test___name__.py`
+HTTP is mocked with the `responses` library through a `mocked_api`
+fixture (`RequestsMock(assert_all_requests_are_fired=True)`): unregistered
+requests fail, and so do registered ones that were never called.
+
+### Generated test cases — `test___TPL_SLUG__.py`
 
 | Test | Expectation |
 |---|---|
 | happy path (fixture JSON) | `success: true`; exact expected taxonomies; expected artifacts |
 | not found (404) | `success: true`; `safe` / `Found` / `False` taxonomy |
-| 401 | `success: false`; `errorMessage` mentions the API key |
+| 401 | `success: false`; `errorMessage` mentions the API key; key is `REMOVED` in echoed input |
 | 429 | `success: false`; rate-limit message |
+| 500 | `success: false`; message includes status and body |
 | timeout | `success: false`; message names the service |
 | unsupported data type | `success: false` |
 | TLP above `max_tlp` | `success: false`; no HTTP call made |
@@ -230,8 +243,8 @@ All pass against the generated skeleton unmodified.
 `analyzers/AbuseIPDB/tests/` uses the same harness pattern, covering:
 single-IP check (score/reports taxonomies, domain/fqdn artifacts), CIDR
 block check (max score / reported IPs taxonomies, ip artifacts),
-whitelisted IP (`Whitelisted` + `info`-level `Reports`), and API error
-(`success: false`). Fixtures follow the documented AbuseIPDB v2 response
+whitelisted IP (`Whitelisted` + `info`-level `Reports`), the `days` config
+reaching the API, TLP rejection, and API error (`success: false`). Fixtures follow the documented AbuseIPDB v2 response
 shapes. AbuseIPDB's `requests.get` calls have no timeout and use plain
 `requests`, which `responses` mocks transparently, so no code change is
 needed.
@@ -246,24 +259,28 @@ Jobs:
 
 1. **discover**: outputs a JSON matrix of analyzer folder names that contain
    `tests/` (`analyzers/*/tests`). If none, the test job is skipped.
-2. **test** (matrix, `fail-fast: false`): Python 3.12; installs
+2. **analyzer-tests** (matrix, `fail-fast: false`): Python 3.12; installs
    `analyzers/<X>/requirements.txt` and `analyzers/<X>/tests/requirements-test.txt`;
    runs `pytest analyzers/<X>/tests -v`.
-3. **template-check**:
-   - runs `python utils/new-analyzer.py --name CiSmoke --datatypes ip --with-thehive-templates`
-   - fails if any `__NAME__`, `__name__`, `__DATATYPES__`, `__AUTHOR__`, or
-     `__VERSION__` token remains in the generated files
-   - validates `analyzers/CiSmoke/CiSmoke.json` against
-     `utils/flavors/flavor_schema.json` with an inline Python step using
-     `jsonschema.Draft7Validator` that exits non-zero on any error
-     (`check_json_schema.py` always exits 0, so it cannot gate CI; it is left
-     unchanged)
-   - installs requirements and runs `pytest analyzers/CiSmoke/tests`
-   - generated files are never committed (CI workspace only)
+3. **template-check**: installs `utils/tests/requirements-test.txt` and runs
+   `pytest utils/tests`. Those tests (runnable locally too) scaffold into
+   `tmp_path` and cover:
+   - renamed files and no remaining `__TPL_` token anywhere
+   - Python dunders left intact
+   - generated flavor JSON validates against `utils/flavors/flavor_schema.json`
+     with `jsonschema.Draft7Validator` (`check_json_schema.py` always exits 0,
+     so it cannot gate CI; it is left unchanged)
+   - `--with-thehive-templates` output, with Angular `{{ }}` intact
+   - refusal to overwrite, name / version / data type validation, exit codes
+   - end to end: scaffolds `CiSmoke` and runs its generated tests in a
+     subprocess; they must pass unmodified
+4. **tests-passed**: `if: always()`, needs all of the above; fails unless
+   `discover` and `template-check` succeeded and `analyzer-tests` succeeded or
+   was skipped. Matrix job names change as analyzers are added, so this one
+   stable name is what branch protection requires.
 
-Making the `test` and `template-check` jobs required status checks for
-`main` / `develop` is a manual GitHub branch-protection step, documented in
-the guide.
+Making `tests-passed` a required status check for `main` / `develop` is a
+manual GitHub branch-protection step, documented in the guide.
 
 ## Documentation — `docs/creating-an-analyzer.md`
 
