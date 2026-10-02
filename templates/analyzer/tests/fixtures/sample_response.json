@@ -1,0 +1,10 @@
+{
+    "ip": "198.51.100.7",
+    "score": 87,
+    "reports": 412,
+    "domain": "Example-Hosting.net.",
+    "hostnames": [
+        "scanner01.example-hosting.net",
+        "SCANNER01.example-hosting.net."
+    ]
+}
