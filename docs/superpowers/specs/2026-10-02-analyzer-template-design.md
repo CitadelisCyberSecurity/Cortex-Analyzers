@@ -3,6 +3,15 @@
 **Date:** 2026-10-02
 **Status:** Approved for planning
 
+> **Update (2026-10-02, after implementation):** the AbuseIPDB analyzer, its
+> tests and its TheHive templates were removed from this repository because
+> AbuseIPDB already ships with upstream Cortex. It served as the reference
+> pattern and as the harness's first real-world test; the repository now
+> contains only the template (`analyzers/` and `thehive-templates/` hold a
+> `.gitkeep`). AbuseIPDB sections below are kept as design history. With no
+> analyzers, `tests.yml` skips `analyzer-tests` and still runs
+> `template-check`.
+
 ## Goal
 
 Make it fast and consistent to build new custom Cortex analyzers that query

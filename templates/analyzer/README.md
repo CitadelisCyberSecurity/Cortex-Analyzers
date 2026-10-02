@@ -31,4 +31,9 @@ TODO: list the extracted observables (for example `domain`, `fqdn`).
 
 #### Logo and screenshots
 
-Put images in `assets/` and reference them from `__TPL_NAME__.json` with `service_logo` and `screenshots`, as `analyzers/AbuseIPDB/AbuseIPDB.json` does.
+Put images in `assets/` and reference them from `__TPL_NAME__.json`:
+
+```json
+"service_logo": {"path": "assets/logo.png", "caption": "logo"},
+"screenshots": [{"path": "assets/report.png", "caption": "__TPL_NAME__ report"}]
+```
