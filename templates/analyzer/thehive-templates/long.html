@@ -1,0 +1,25 @@
+<!-- __TPL_NAME__ long report. "content" is the analyzer's full report. TODO: show the fields that matter. -->
+<div class="panel panel-info" ng-if="success">
+    <div class="panel-heading">
+        __TPL_NAME__ report for <strong>{{(artifact.data || artifact.attachment.name) | fang}}</strong>
+    </div>
+    <div class="panel-body">
+        <p ng-if="!content.found">No record found in __TPL_NAME__.</p>
+        <dl class="dl-horizontal" ng-if="content.found">
+            <dt ng-repeat-start="(field, value) in content.data">{{field}}</dt>
+            <dd ng-repeat-end>{{value}}</dd>
+        </dl>
+    </div>
+</div>
+
+<div class="panel panel-danger" ng-if="!success">
+    <div class="panel-heading">
+        <strong>{{(artifact.data || artifact.attachment.name) | fang}}</strong>
+    </div>
+    <div class="panel-body">
+        <dl class="dl-horizontal" ng-if="content && content.errorMessage">
+            <dt><i class="fa fa-warning"></i> __TPL_NAME__:</dt>
+            <dd class="wrap">{{content.errorMessage}}</dd>
+        </dl>
+    </div>
+</div>

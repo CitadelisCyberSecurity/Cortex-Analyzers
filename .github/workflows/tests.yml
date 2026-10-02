@@ -1,0 +1,101 @@
+name: tests
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - develop
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  discover:
+    name: Discover analyzers with tests
+    runs-on: ubuntu-latest
+    outputs:
+      analyzers: ${{ steps.find.outputs.analyzers }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Find analyzers/*/tests
+        id: find
+        run: |
+          # analyzers/ may contain only .gitkeep, so tolerate a find with no results.
+          analyzers=$(find analyzers -mindepth 2 -maxdepth 2 -type d -name tests 2>/dev/null \
+            | cut -d/ -f2 | sort | jq -R -s -c 'split("\n")[:-1]')
+          echo "Analyzers with tests: $analyzers"
+          echo "analyzers=$analyzers" >> "$GITHUB_OUTPUT"
+
+  analyzer-tests:
+    name: test (${{ matrix.analyzer }})
+    needs: discover
+    if: needs.discover.outputs.analyzers != '[]'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        analyzer: ${{ fromJson(needs.discover.outputs.analyzers) }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        env:
+          ANALYZER: ${{ matrix.analyzer }}
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r "analyzers/$ANALYZER/requirements.txt" \
+                      -r "analyzers/$ANALYZER/tests/requirements-test.txt"
+
+      - name: Run tests
+        env:
+          ANALYZER: ${{ matrix.analyzer }}
+        run: python -m pytest "analyzers/$ANALYZER/tests" -v
+
+  template-check:
+    name: template-check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r utils/tests/requirements-test.txt
+
+      - name: Test the scaffolding script and the template it generates
+        run: python -m pytest utils/tests -v
+
+  # Single stable check name for branch protection; matrix job names change
+  # whenever an analyzer is added.
+  tests-passed:
+    name: tests-passed
+    if: always()
+    needs: [discover, analyzer-tests, template-check]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check results
+        env:
+          DISCOVER: ${{ needs.discover.result }}
+          ANALYZERS: ${{ needs.analyzer-tests.result }}
+          TEMPLATE: ${{ needs.template-check.result }}
+        run: |
+          echo "discover=$DISCOVER analyzer-tests=$ANALYZERS template-check=$TEMPLATE"
+          [ "$DISCOVER" = "success" ] || exit 1
+          [ "$ANALYZERS" = "success" ] || [ "$ANALYZERS" = "skipped" ] || exit 1
+          [ "$TEMPLATE" = "success" ] || exit 1
