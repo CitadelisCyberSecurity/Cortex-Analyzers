@@ -1,0 +1,44 @@
+{
+    "name": "ProxyCheck",
+    "version": "1.0",
+    "author": "Mahmoud Maz",
+    "url": "https://github.com/TheHive-Project/Cortex-Analyzers",
+    "license": "AGPL-V3",
+    "description": "Check whether an IP address (or the IPs a domain, FQDN or URL resolves to) is a proxy, VPN, Tor exit node, scraper, compromised or hosting address using proxycheck.io. Also returns a risk score, operator, location and ASN information.",
+    "dataTypeList": ["ip", "domain", "fqdn", "url"],
+    "baseConfig": "ProxyCheck",
+    "command": "ProxyCheck/proxycheck.py",
+    "dockerImage": "customimages/proxycheck:1.0",
+    "configurationItems": [
+        {
+            "name": "key",
+            "description": "API key for proxycheck.io (optional: without a key the limit is 100 queries per day)",
+            "type": "string",
+            "multi": false,
+            "required": false
+        },
+        {
+            "name": "max_resolved_ips",
+            "description": "Maximum number of resolved IPs to look up for domain, FQDN and URL observables",
+            "type": "number",
+            "multi": false,
+            "required": false,
+            "defaultValue": 5
+        }
+    ],
+    "config": {
+        "check_tlp": true,
+        "max_tlp": 2,
+        "auto_extract": false
+    },
+    "registration_required": false,
+    "subscription_required": false,
+    "free_subscription": true,
+    "integration_type": "external_api",
+    "service_homepage": "https://proxycheck.io/",
+    "service_logo": {
+        "path": "",
+        "caption": "logo"
+    },
+    "screenshots": []
+}
