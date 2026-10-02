@@ -121,6 +121,19 @@ def test_api_key_is_redacted_from_connection_errors(run_analyzer, mocked_api, an
     assert "REMOVED" in output["errorMessage"]
 
 
+def test_url_encoded_api_key_is_redacted(run_analyzer, mocked_api, analyzer_class):
+    mocked_api.get(
+        ip_url(analyzer_class),
+        body=requests.exceptions.ConnectionError("Max retries exceeded with url: /ip/x?key=ab%2Bc%2Fd%3D"),
+    )
+
+    output = run_analyzer(IP, config={"key": "ab+c/d="})
+
+    assert output["success"] is False
+    for form in ("ab+c/d=", "ab%2Bc%2Fd%3D"):
+        assert form not in output["errorMessage"]
+
+
 def test_api_key_is_redacted_from_error_bodies(run_analyzer, mocked_api, analyzer_class):
     mocked_api.get(ip_url(analyzer_class), status=500, body="bad request key=test-key")
 
@@ -133,3 +146,9 @@ def test_api_key_is_redacted_from_error_bodies(run_analyzer, mocked_api, analyze
 def test_every_declared_data_type_has_a_handler(flavor, analyzer_class):
     missing = set(flavor["dataTypeList"]) - set(analyzer_class.HANDLERS)
     assert not missing, f"No handler in HANDLERS for: {sorted(missing)}"
+    broken = sorted(
+        f"{data_type} -> {name}"
+        for data_type, name in analyzer_class.HANDLERS.items()
+        if not callable(getattr(analyzer_class, name, None))
+    )
+    assert not broken, f"HANDLERS entries without a callable method: {broken}"

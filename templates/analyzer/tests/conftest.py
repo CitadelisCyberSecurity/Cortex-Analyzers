@@ -34,7 +34,14 @@ def _load_flavor():
 def _load_analyzer_class(module_path):
     spec = importlib.util.spec_from_file_location(module_path.stem, module_path)
     module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    # Cortex runs "python <Name>/<slug>.py", which puts the analyzer folder first
+    # on sys.path. Do the same so a slug like shodan.py shadows "import shodan"
+    # here exactly as it would in production.
+    sys.path.insert(0, str(ANALYZER_DIR))
+    try:
+        spec.loader.exec_module(module)
+    finally:
+        sys.path.remove(str(ANALYZER_DIR))
     for _, obj in inspect.getmembers(module, inspect.isclass):
         if issubclass(obj, Analyzer) and obj.__module__ == module.__name__:
             return obj

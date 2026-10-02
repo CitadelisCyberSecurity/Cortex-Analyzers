@@ -312,7 +312,7 @@ to the guide.
 - `python utils/new-analyzer.py --name Foo --datatypes ip` produces an
   analyzer whose tests pass with no edits, and whose JSON validates against
   `flavor_schema.json`.
-- `tests.yml` runs the AbuseIPDB tests and the template check, and both pass.
+- `tests.yml` passes with zero analyzers (the `analyzer-tests` matrix is skipped and `template-check` runs).
 - No `tests/` folder ends up in built images (`.dockerignore`).
 - `build.yml` and `publish-catalogs.yml` are unchanged and never see the
   skeleton.

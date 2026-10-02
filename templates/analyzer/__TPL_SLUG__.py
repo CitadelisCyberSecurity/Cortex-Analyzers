@@ -9,6 +9,7 @@ API docs: TODO: link to the service's API documentation.
 
 import sys
 import traceback
+from urllib.parse import quote, quote_plus
 
 import requests
 from cortexutils.analyzer import Analyzer
@@ -45,7 +46,12 @@ class __TPL_NAME__Analyzer(Analyzer):
         )
 
     def _redact(self, text):
-        return text.replace(self.api_key, "REMOVED") if self.api_key else text
+        if not self.api_key:
+            return text
+        # requests shows query-string keys URL-encoded, so redact those forms too.
+        for form in (self.api_key, quote(self.api_key, safe=""), quote_plus(self.api_key)):
+            text = text.replace(form, "REMOVED")
+        return text
 
     def _request(self, method, path, **kwargs):
         """Send one API request and return the parsed JSON body.
@@ -96,6 +102,7 @@ class __TPL_NAME__Analyzer(Analyzer):
     def report(self, full_report, ensure_ascii=False):
         # cortexutils' report() swallows summary() errors and sends an empty
         # summary, so Shuffle would get no taxonomies. Fail the job instead.
+        # summary() runs twice (here and in super()), so keep it pure: no API calls.
         self.summary(full_report)
         super().report(full_report, ensure_ascii)
 

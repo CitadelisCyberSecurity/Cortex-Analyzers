@@ -24,7 +24,8 @@ jobs:
       - name: Find analyzers/*/tests
         id: find
         run: |
-          analyzers=$(find analyzers -mindepth 2 -maxdepth 2 -type d -name tests \
+          # analyzers/ may contain only .gitkeep, so tolerate a find with no results.
+          analyzers=$(find analyzers -mindepth 2 -maxdepth 2 -type d -name tests 2>/dev/null \
             | cut -d/ -f2 | sort | jq -R -s -c 'split("\n")[:-1]')
           echo "Analyzers with tests: $analyzers"
           echo "analyzers=$analyzers" >> "$GITHUB_OUTPUT"

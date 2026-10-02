@@ -8,6 +8,8 @@ New analyzers are generated from `templates/analyzer/`. The generated code is a 
 python utils/new-analyzer.py --name Shodan --datatypes ip,domain
 ```
 
+Don't name the analyzer after a Python library it imports (for example `--name Shodan` when you use the `shodan` package): `shodan.py` would shadow the library. Name it `ShodanLookup` or similar.
+
 Options:
 
 | Option | Default | Notes |
@@ -53,7 +55,7 @@ List every taxonomy in the analyzer's README.
 The tests run the analyzer exactly as Cortex does: `tests/conftest.py` writes a job folder, runs the program, and returns `output/output.json`, the same JSON Shuffle receives. All HTTP is mocked with [`responses`](https://github.com/getsentry/responses), so tests need no network access or API key.
 
 1. Call the real API once (with `curl` or `utils/analyzer-runlocal.py`) and save the response as `tests/fixtures/<something>.json`. **Remove API keys, internal hostnames and anything else sensitive** before committing.
-2. Update `tests/test_shodan.py`: URLs, fixtures, and the exact expected taxonomies and artifacts. Keep the error-path tests (401, 429, 500, timeout, unsupported type, TLP); they test `_request()` and the flavor config.
+2. Update `tests/test_shodan.py`: URLs, fixtures, and the exact expected taxonomies and artifacts. Keep the error-path tests (401, 429, 500, timeout, unsupported type, TLP), the summary-error test, the API-key redaction tests and the handler-coverage test; they test `_request()`, `report()` and the flavor config.
 3. Run:
 
 ```bash
@@ -64,7 +66,7 @@ python -m venv .venv
 
 (On Linux/macOS, use `.venv/bin/python`.)
 
-Assert the **full** taxonomy list, not just one item: `cortexutils` silently replaces a crashing `summary()` with `{}`, and only an exact assertion catches that.
+Assert the **full** taxonomy list, not just one item: exact assertions catch wrong or missing taxonomies.
 
 ## 5. Optional: live smoke test
 
