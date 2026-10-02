@@ -1,0 +1,26 @@
+{
+    "data": {
+        "networkAddress": "192.0.2.0",
+        "netmask": "255.255.255.0",
+        "minAddress": "192.0.2.1",
+        "maxAddress": "192.0.2.254",
+        "numPossibleHosts": 254,
+        "addressSpaceDesc": "Internet",
+        "reportedAddress": [
+            {
+                "ipAddress": "192.0.2.20",
+                "numReports": 1,
+                "mostRecentReport": "2026-09-28T09:00:00+00:00",
+                "abuseConfidenceScore": 10,
+                "countryCode": "FR"
+            },
+            {
+                "ipAddress": "192.0.2.10",
+                "numReports": 5,
+                "mostRecentReport": "2026-09-30T10:00:00+00:00",
+                "abuseConfidenceScore": 80,
+                "countryCode": "US"
+            }
+        ]
+    }
+}
