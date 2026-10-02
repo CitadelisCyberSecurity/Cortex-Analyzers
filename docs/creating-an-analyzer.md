@@ -29,11 +29,11 @@ grep -rn "TODO:" analyzers/Shodan
 In `shodan.py`:
 
 - `BASE_URL` and the `Authorization` header in `__init__`.
-- One handler method per data type (replace `_lookup_ip`), registered in the `handlers` dict in `run()`. Each returns a dict with `query_type`, `found` and the API data.
+- One handler method per data type (replace `_lookup_ip`), registered in the `HANDLERS` class attribute (data type to method name). Each returns a dict with `query_type`, `found` and the API data. If you scaffolded data types other than `ip`, `test_every_declared_data_type_has_a_handler` fails until each one has a handler; this is intentional.
 - `summary()`: map the response to taxonomies (see below).
 - `artifacts()`: extract related observables.
 
-Keep all HTTP inside `_request()`. It already handles timeouts, auth failures, rate limits, 404 → "not found", and other HTTP errors, with messages that end up in IRIS.
+Keep all HTTP inside `_request()`. It already handles timeouts, auth failures, rate limits, 404 → "not found", and other HTTP errors, with messages that end up in IRIS. `_request()` also redacts the API key from error messages. A crash in `summary()` fails the job instead of silently sending no taxonomies.
 
 In `Shodan.json`: `description`, `service_homepage`, and the `registration_required` / `subscription_required` / `free_subscription` flags. Add extra `configurationItems` if the service needs them. In `README.md`: fill in each section.
 
