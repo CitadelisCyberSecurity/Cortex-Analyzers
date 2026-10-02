@@ -1,0 +1,40 @@
+{
+    "name": "__TPL_NAME__",
+    "version": "__TPL_VERSION__",
+    "author": "__TPL_AUTHOR__",
+    "url": "https://github.com/CitadelisCyberSecurity/Cortex-Analyzers",
+    "license": "AGPL-V3",
+    "description": "TODO: one sentence describing what __TPL_NAME__ returns.",
+    "dataTypeList": __TPL_DATATYPES__,
+    "baseConfig": "__TPL_NAME__",
+    "command": "__TPL_NAME__/__TPL_SLUG__.py",
+    "configurationItems": [
+        {
+            "name": "key",
+            "description": "API key for __TPL_NAME__",
+            "type": "string",
+            "multi": false,
+            "required": true
+        },
+        {
+            "name": "timeout",
+            "description": "HTTP request timeout in seconds",
+            "type": "number",
+            "multi": false,
+            "required": false,
+            "defaultValue": 30
+        }
+    ],
+    "config": {
+        "check_tlp": true,
+        "max_tlp": 2,
+        "check_pap": true,
+        "max_pap": 2,
+        "auto_extract": false
+    },
+    "registration_required": true,
+    "subscription_required": true,
+    "free_subscription": true,
+    "integration_type": "external_api",
+    "service_homepage": "TODO: https://www.example.com/"
+}
