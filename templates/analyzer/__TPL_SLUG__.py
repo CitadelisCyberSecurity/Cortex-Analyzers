@@ -7,6 +7,9 @@ code is marked "TODO:". See docs/creating-an-analyzer.md.
 API docs: TODO: link to the service's API documentation.
 """
 
+import sys
+import traceback
+
 import requests
 from cortexutils.analyzer import Analyzer
 
@@ -23,6 +26,10 @@ class __TPL_NAME__Analyzer(Analyzer):
     MALICIOUS_THRESHOLD = 75
     SUSPICIOUS_THRESHOLD = 1
 
+    # Data type -> handler method name. Must cover every type in the flavor's
+    # dataTypeList (a test checks this). TODO: add one handler per data type.
+    HANDLERS = {"ip": "_lookup_ip"}
+
     def __init__(self):
         super().__init__()
         self.api_key = self.get_param("config.key", None, "Missing API key")
@@ -37,6 +44,9 @@ class __TPL_NAME__Analyzer(Analyzer):
             }
         )
 
+    def _redact(self, text):
+        return text.replace(self.api_key, "REMOVED") if self.api_key else text
+
     def _request(self, method, path, **kwargs):
         """Send one API request and return the parsed JSON body.
 
@@ -50,7 +60,7 @@ class __TPL_NAME__Analyzer(Analyzer):
         except requests.exceptions.Timeout:
             self.error(f"{self.NAMESPACE}: request timed out after {self.timeout}s")
         except requests.exceptions.RequestException as e:
-            self.error(f"{self.NAMESPACE}: could not reach the API ({e})")
+            self.error(f"{self.NAMESPACE}: could not reach the API ({self._redact(str(e))})")
 
         if response.status_code == 404:
             return None
@@ -61,7 +71,7 @@ class __TPL_NAME__Analyzer(Analyzer):
         if not response.ok:
             self.error(
                 f"{self.NAMESPACE}: API returned HTTP {response.status_code}: "
-                f"{response.text[:500]}"
+                f"{self._redact(response.text[:500])}"
             )
         try:
             return response.json()
@@ -75,16 +85,19 @@ class __TPL_NAME__Analyzer(Analyzer):
 
     def run(self):
         try:
-            handlers = {
-                "ip": self._lookup_ip,
-                # TODO: add one handler per data type in the flavor's dataTypeList.
-            }
-            handler = handlers.get(self.data_type)
-            if handler is None:
+            handler_name = self.HANDLERS.get(self.data_type)
+            if handler_name is None:
                 self.notSupported()
-            self.report(handler(self.get_data()))
+            self.report(getattr(self, handler_name)(self.get_data()))
         except Exception as e:
+            traceback.print_exc(file=sys.stderr)
             self.unexpectedError(e)
+
+    def report(self, full_report, ensure_ascii=False):
+        # cortexutils' report() swallows summary() errors and sends an empty
+        # summary, so Shuffle would get no taxonomies. Fail the job instead.
+        self.summary(full_report)
+        super().report(full_report, ensure_ascii)
 
     def _level(self, score):
         if score >= self.MALICIOUS_THRESHOLD:

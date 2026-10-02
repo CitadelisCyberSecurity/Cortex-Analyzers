@@ -57,6 +57,11 @@ def _default_config():
 
 
 @pytest.fixture
+def flavor():
+    return FLAVOR
+
+
+@pytest.fixture
 def analyzer_class():
     return ANALYZER_CLASS
 
@@ -76,6 +81,9 @@ def run_analyzer(tmp_path, monkeypatch):
             "config": job_config,
         }
         (job_dir / "input" / "input.json").write_text(json.dumps(job), encoding="utf-8")
+        # cortexutils sets these from config.proxy; monkeypatch restores them afterwards.
+        monkeypatch.delenv("http_proxy", raising=False)
+        monkeypatch.delenv("https_proxy", raising=False)
         monkeypatch.setattr(sys, "argv", [str(MODULE_PATH), str(job_dir)])
         try:
             ANALYZER_CLASS().run()

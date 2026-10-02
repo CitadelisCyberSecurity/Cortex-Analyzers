@@ -18,6 +18,7 @@ from pathlib import Path
 TEMPLATE_DIR = Path(__file__).resolve().parent.parent / "templates" / "analyzer"
 THEHIVE_SUBDIR = "thehive-templates"
 IGNORED_NAMES = {"__pycache__", ".pytest_cache"}
+RESERVED_MODULES = {"requests", "cortexutils", "responses", "pytest", "conftest"}
 
 NAME_RE = re.compile(r"^[A-Za-z][A-Za-z0-9]*$")
 VERSION_RE = re.compile(r"^[0-9]+(\.[0-9]+)*$")
@@ -37,11 +38,19 @@ def validate_name(name):
         raise ScaffoldError(
             f"Invalid name {name!r}: use letters and digits only, starting with a letter"
         )
+    if name.lower() in sys.stdlib_module_names or name.lower() in RESERVED_MODULES:
+        raise ScaffoldError(
+            f"Invalid name {name!r}: {name.lower()}.py would shadow the Python module "
+            f"{name.lower()!r}; pick another name"
+        )
     return name
 
 
 def parse_datatypes(value):
-    datatypes = [d.strip() for d in value.split(",") if d.strip()]
+    return validate_datatypes([d.strip() for d in value.split(",") if d.strip()])
+
+
+def validate_datatypes(datatypes):
     if not datatypes:
         raise ScaffoldError("Give at least one data type")
     unknown = sorted(set(datatypes) - DATATYPES)
@@ -63,7 +72,7 @@ def _tokens(name, datatypes, author, version):
         "__TPL_NAME__": name,
         "__TPL_SLUG__": name.lower(),
         "__TPL_DATATYPES__": json.dumps(datatypes),
-        "__TPL_AUTHOR__": author,
+        "__TPL_AUTHOR__": json.dumps(author)[1:-1],
         "__TPL_VERSION__": version,
     }
 
@@ -82,7 +91,12 @@ def _copy_tree(src_dir, dst_dir, tokens, skip=()):
             continue
         dst = dst_dir / _replace(str(rel), tokens)
         dst.parent.mkdir(parents=True, exist_ok=True)
-        dst.write_bytes(_replace(src.read_text(encoding="utf-8"), tokens).encode("utf-8"))
+        data = src.read_bytes()
+        try:
+            data = _replace(data.decode("utf-8"), tokens).encode("utf-8")
+        except UnicodeDecodeError:
+            pass  # binary file (logo, screenshot): copy unchanged
+        dst.write_bytes(data)
         created.append(dst)
     return created
 
@@ -91,6 +105,7 @@ def scaffold(name, datatypes, author, version, repo_root, with_thehive_templates
     """Create the analyzer and return the list of files written."""
     validate_name(name)
     validate_version(version)
+    validate_datatypes(datatypes)
     repo_root = Path(repo_root)
     analyzer_dir = repo_root / "analyzers" / name
     thehive_dir = repo_root / "thehive-templates" / f"{name}_{version.replace('.', '_')}"

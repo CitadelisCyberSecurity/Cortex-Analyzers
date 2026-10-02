@@ -2,6 +2,7 @@
 
 import importlib.util
 import json
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -127,13 +128,57 @@ def test_main_exit_codes(tmp_path, capsys):
     assert "already exists" in capsys.readouterr().err
 
 
-def test_generated_analyzer_tests_pass(tmp_path):
-    """End to end: the skeleton's own tests pass with no edits."""
-    make(tmp_path, name="CiSmoke", datatypes=("ip",))
-
-    result = subprocess.run(
+def run_generated_tests(tmp_path, name, datatypes):
+    make(tmp_path, name=name, datatypes=datatypes)
+    return subprocess.run(
         [sys.executable, "-m", "pytest", "-q", "-p", "no:cacheprovider",
-         str(tmp_path / "analyzers" / "CiSmoke" / "tests")],
+         str(tmp_path / "analyzers" / name / "tests")],
         capture_output=True, text=True, cwd=tmp_path,
     )
+
+
+def test_generated_analyzer_tests_pass(tmp_path):
+    """End to end: the skeleton's own tests pass with no edits."""
+    result = run_generated_tests(tmp_path, "CiSmoke", ("ip",))
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_extra_datatypes_fail_until_handlers_exist(tmp_path):
+    result = run_generated_tests(tmp_path, "CiMulti", ("ip", "domain"))
+    assert result.returncode != 0
+    assert "test_every_declared_data_type_has_a_handler" in result.stdout
+    assert "domain" in result.stdout
+
+
+def test_author_is_escaped_for_json(tmp_path):
+    author = 'Dylan "DP" P\\x'
+    new_analyzer.scaffold("Shodan", ["ip"], author, "1.0", tmp_path)
+
+    flavor = json.loads((tmp_path / "analyzers/Shodan/Shodan.json").read_text(encoding="utf-8"))
+    assert flavor["author"] == author
+
+
+def test_binary_files_are_copied_unchanged(tmp_path, monkeypatch):
+    template = tmp_path / "template"
+    shutil.copytree(new_analyzer.TEMPLATE_DIR, template)
+    blob = b"\x89PNG\r\n\x1a\n\xff\xfe"
+    (template / "assets" / "logo.png").write_bytes(blob)
+    monkeypatch.setattr(new_analyzer, "TEMPLATE_DIR", template)
+    repo = tmp_path / "repo"
+
+    new_analyzer.scaffold("Shodan", ["ip"], "Citadelis", "1.0", repo)
+
+    assert (repo / "analyzers/Shodan/assets/logo.png").read_bytes() == blob
+
+
+def test_scaffold_validates_datatypes(tmp_path):
+    with pytest.raises(new_analyzer.ScaffoldError, match="Unknown data type"):
+        new_analyzer.scaffold("Shodan", ["ipv4"], "Citadelis", "1.0", tmp_path)
+    with pytest.raises(new_analyzer.ScaffoldError, match="at least one"):
+        new_analyzer.scaffold("Shodan", [], "Citadelis", "1.0", tmp_path)
+
+
+@pytest.mark.parametrize("name", ["Requests", "Json", "Pytest"])
+def test_rejects_names_that_shadow_modules(tmp_path, name):
+    with pytest.raises(new_analyzer.ScaffoldError, match="shadow"):
+        make(tmp_path, name=name)

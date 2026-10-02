@@ -97,3 +97,39 @@ def test_tlp_above_max_is_rejected_before_any_request(run_analyzer, mocked_api):
     assert output["success"] is False
     assert "TLP" in output["errorMessage"]
     assert len(mocked_api.calls) == 0
+
+
+def test_summary_error_fails_the_job(run_analyzer, mocked_api, analyzer_class):
+    mocked_api.get(ip_url(analyzer_class), json={"score": "high"})
+
+    output = run_analyzer(IP)
+
+    assert output["success"] is False
+    assert "Unexpected Error" in output["errorMessage"]
+
+
+def test_api_key_is_redacted_from_connection_errors(run_analyzer, mocked_api, analyzer_class):
+    mocked_api.get(
+        ip_url(analyzer_class),
+        body=requests.exceptions.ConnectionError("Max retries exceeded with url: /ip/x?key=test-key"),
+    )
+
+    output = run_analyzer(IP)
+
+    assert output["success"] is False
+    assert "test-key" not in output["errorMessage"]
+    assert "REMOVED" in output["errorMessage"]
+
+
+def test_api_key_is_redacted_from_error_bodies(run_analyzer, mocked_api, analyzer_class):
+    mocked_api.get(ip_url(analyzer_class), status=500, body="bad request key=test-key")
+
+    output = run_analyzer(IP)
+
+    assert output["success"] is False
+    assert "test-key" not in output["errorMessage"]
+
+
+def test_every_declared_data_type_has_a_handler(flavor, analyzer_class):
+    missing = set(flavor["dataTypeList"]) - set(analyzer_class.HANDLERS)
+    assert not missing, f"No handler in HANDLERS for: {sorted(missing)}"
