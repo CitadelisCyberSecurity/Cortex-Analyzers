@@ -1,0 +1,75 @@
+<!-- VPNAPI long report. "content" is the analyzer's full report: {query, resolved, results[]}. -->
+<div class="panel panel-info" ng-if="success">
+    <div class="panel-heading">
+        VPNAPI report for <strong>{{(artifact.data || artifact.attachment.name) | fang}}</strong>
+    </div>
+    <div class="panel-body">
+        <p ng-if="content.resolved">
+            Resolved to {{content.results.length}} IP address{{content.results.length === 1 ? '' : 'es'}}.
+        </p>
+        <p ng-if="!content.results.length">No result returned by VPNAPI.io.</p>
+    </div>
+</div>
+
+<div class="panel panel-default" ng-if="success" ng-repeat="r in content.results">
+    <div class="panel-heading">
+        <strong>{{r.ip | fang}}</strong>
+        <span class="label label-danger" ng-if="r.security.tor">Tor</span>
+        <span class="label label-warning" ng-if="r.security.vpn">VPN</span>
+        <span class="label label-warning" ng-if="r.security.proxy">Proxy</span>
+        <span class="label label-warning" ng-if="r.security.relay">Relay</span>
+        <span class="label label-success"
+              ng-if="!r.security.tor && !r.security.vpn && !r.security.proxy && !r.security.relay">No anonymizer</span>
+    </div>
+    <div class="panel-body">
+        <h4>Security</h4>
+        <dl class="dl-horizontal">
+            <dt>VPN</dt>
+            <dd>{{r.security.vpn ? 'Yes' : 'No'}}</dd>
+            <dt>Proxy</dt>
+            <dd>{{r.security.proxy ? 'Yes' : 'No'}}</dd>
+            <dt>Tor</dt>
+            <dd>{{r.security.tor ? 'Yes' : 'No'}}</dd>
+            <dt>Relay</dt>
+            <dd>{{r.security.relay ? 'Yes' : 'No'}}</dd>
+        </dl>
+
+        <h4>Network</h4>
+        <dl class="dl-horizontal">
+            <dt>ASN</dt>
+            <dd>{{r.network.autonomous_system_number || '-'}}</dd>
+            <dt>Organisation</dt>
+            <dd>{{r.network.autonomous_system_organization || '-'}}</dd>
+            <dt>Range</dt>
+            <dd>{{r.network.network || '-'}}</dd>
+        </dl>
+
+        <h4>Location</h4>
+        <dl class="dl-horizontal">
+            <dt>Country</dt>
+            <dd>{{r.location.country || '-'}} <span ng-if="r.location.country_code">({{r.location.country_code}})</span></dd>
+            <dt>Region</dt>
+            <dd>{{r.location.region || '-'}}</dd>
+            <dt>City</dt>
+            <dd>{{r.location.city || '-'}}</dd>
+            <dt>Continent</dt>
+            <dd>{{r.location.continent || '-'}}</dd>
+            <dt>Time zone</dt>
+            <dd>{{r.location.time_zone || '-'}}</dd>
+            <dt>EU</dt>
+            <dd>{{r.location.is_in_european_union ? 'Yes' : 'No'}}</dd>
+        </dl>
+    </div>
+</div>
+
+<div class="panel panel-danger" ng-if="!success">
+    <div class="panel-heading">
+        <strong>{{(artifact.data || artifact.attachment.name) | fang}}</strong>
+    </div>
+    <div class="panel-body">
+        <dl class="dl-horizontal" ng-if="content && content.errorMessage">
+            <dt><i class="fa fa-warning"></i> VPNAPI:</dt>
+            <dd class="wrap">{{content.errorMessage}}</dd>
+        </dl>
+    </div>
+</div>

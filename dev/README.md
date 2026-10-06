@@ -41,6 +41,7 @@ UI: <http://127.0.0.1:9001>
 python dev/run_job.py ProxyCheck_1_0 ip 1.1.1.1            # summary + artifacts
 python dev/run_job.py ProxyCheck_1_0 domain example.com --full
 python dev/run_job.py ProxyCheck_1_0 ip 1.1.1.1 --tlp 3     # should fail: max TLP is 2
+python dev/run_job.py VPNAPI_1_0 ip 1.1.1.1                # needs a key, see below
 ```
 
 Or log in as `citadelis-admin` and use **New Analysis** in the UI.
@@ -52,11 +53,13 @@ definition id, then re-run `bootstrap.py`:
 
 ```json
 {
-    "ProxyCheck_1_0": {"key": "your-proxycheck-key"}
+    "ProxyCheck_1_0": {"key": "your-proxycheck-key"},
+    "VPNAPI_1_0": {"key": "your-vpnapi-key"}
 }
 ```
 
-ProxyCheck works without a key (100 queries a day).
+ProxyCheck works without a key (100 queries a day). VPNAPI requires one; a
+free key from <https://vpnapi.io/> allows 1,000 queries a day.
 
 ## After changing an analyzer
 
