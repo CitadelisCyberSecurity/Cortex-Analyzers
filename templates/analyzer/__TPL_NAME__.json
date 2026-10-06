@@ -8,6 +8,7 @@
     "dataTypeList": __TPL_DATATYPES__,
     "baseConfig": "__TPL_NAME__",
     "command": "__TPL_NAME__/__TPL_SLUG__.py",
+    "dockerImage": "ghcr.io/citadeliscybersecurity/__TPL_SLUG__:devel",
     "configurationItems": [
         {
             "name": "key",
