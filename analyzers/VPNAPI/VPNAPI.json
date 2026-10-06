@@ -1,0 +1,44 @@
+{
+    "name": "VPNAPI",
+    "version": "1.0",
+    "author": "Mahmoud Maz",
+    "url": "https://github.com/CitadelisCyberSecurity/Cortex-Analyzers",
+    "license": "AGPL-V3",
+    "description": "Check whether an IP address (or the IPs a domain, FQDN or URL resolves to) is a VPN, proxy, Tor exit node or relay using VPNAPI.io. Also returns location and ASN information.",
+    "dataTypeList": ["ip", "domain", "fqdn", "url"],
+    "baseConfig": "VPNAPI",
+    "command": "VPNAPI/vpnapi.py",
+    "dockerImage": "customimages/vpnapi:1.0",
+    "configurationItems": [
+        {
+            "name": "key",
+            "description": "API key for VPNAPI.io",
+            "type": "string",
+            "multi": false,
+            "required": true
+        },
+        {
+            "name": "max_resolved_ips",
+            "description": "Maximum number of resolved IPs to look up for domain, FQDN and URL observables",
+            "type": "number",
+            "multi": false,
+            "required": false,
+            "defaultValue": 5
+        }
+    ],
+    "config": {
+        "check_tlp": true,
+        "max_tlp": 2,
+        "auto_extract": false
+    },
+    "registration_required": true,
+    "subscription_required": true,
+    "free_subscription": true,
+    "integration_type": "external_api",
+    "service_homepage": "https://vpnapi.io/",
+    "service_logo": {
+        "path": "",
+        "caption": "logo"
+    },
+    "screenshots": []
+}

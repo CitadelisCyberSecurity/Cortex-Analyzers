@@ -58,12 +58,17 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
       - /tmp/cortex-jobs:/tmp/cortex-jobs
 
-  # Build-only: tags the image named in ProxyCheck.json so Cortex runs the
+  # Build-only: each tags the image named in its flavor JSON so Cortex runs the
   # local code. Rebuild after every change to the analyzer.
   proxycheck:
     profiles: [analyzers]
     build: ../analyzers/ProxyCheck
     image: ghcr.io/citadeliscybersecurity/proxycheck:devel
+
+  vpnapi:
+    profiles: [analyzers]
+    build: ../analyzers/VPNAPI
+    image: customimages/vpnapi:1.0
 
 volumes:
   es-data:

@@ -1,0 +1,29 @@
+{
+    "ip": "198.51.100.20",
+    "security": {
+        "vpn": false,
+        "proxy": false,
+        "tor": false,
+        "relay": false
+    },
+    "location": {
+        "city": "Philadelphia",
+        "region": "Pennsylvania",
+        "country": "United States",
+        "continent": "North America",
+        "region_code": "PA",
+        "country_code": "US",
+        "continent_code": "NA",
+        "latitude": "39.9523",
+        "longitude": "-75.1638",
+        "time_zone": "America/New_York",
+        "locale_code": "en",
+        "metro_code": "504",
+        "is_in_european_union": false
+    },
+    "network": {
+        "network": "198.51.100.0/24",
+        "autonomous_system_number": "AS7922",
+        "autonomous_system_organization": "Comcast Cable Communications, LLC"
+    }
+}
