@@ -1,0 +1,69 @@
+# Local Cortex for testing the analyzers in this repo. Not for production:
+# Elasticsearch security is off and Cortex gets the host's Docker socket.
+#
+#   docker compose -f dev/docker-compose.yml --profile analyzers build
+#   docker compose -f dev/docker-compose.yml up -d
+#   python dev/bootstrap.py
+#
+# See dev/README.md.
+
+name: cortex-dev
+
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.19.22
+    environment:
+      discovery.type: single-node
+      xpack.security.enabled: "false"
+      ES_JAVA_OPTS: -Xms1g -Xmx1g
+    volumes:
+      - es-data:/usr/share/elasticsearch/data
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fs http://localhost:9200/_cluster/health?wait_for_status=yellow || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
+  # Cortex creates job folders as uid 1001, but Docker creates the bind-mounted
+  # folder as root. Open it up before Cortex starts.
+  job-dir:
+    image: busybox:1.37
+    command: ["sh", "-c", "chmod 1777 /tmp/cortex-jobs"]
+    volumes:
+      - /tmp/cortex-jobs:/tmp/cortex-jobs
+
+  cortex:
+    image: thehiveproject/cortex:4.1.0
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+      job-dir:
+        condition: service_completed_successfully
+    command:
+      - --es-uri
+      - http://elasticsearch:9200
+      - --analyzer-url
+      - /opt/cortex/analyzers
+      - --job-directory
+      - /tmp/cortex-jobs
+      # Analyzer containers are started by the host's Docker daemon, so the job
+      # folder must have the same path on the host (here, the Docker VM).
+      - --docker-job-directory
+      - /tmp/cortex-jobs
+    ports:
+      - "127.0.0.1:9001:9001"
+    volumes:
+      - ./cortex/application.conf:/etc/cortex/application.conf:ro
+      - ../analyzers:/opt/cortex/analyzers:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /tmp/cortex-jobs:/tmp/cortex-jobs
+
+  # Build-only: tags the image named in ProxyCheck.json so Cortex runs the
+  # local code. Rebuild after every change to the analyzer.
+  proxycheck:
+    profiles: [analyzers]
+    build: ../analyzers/ProxyCheck
+    image: customimages/proxycheck:1.0
+
+volumes:
+  es-data:
