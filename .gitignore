@@ -25,3 +25,6 @@ analyzers/*/output
 responders/*/input
 responders/*/output
 analyzers/*/cortexutils
+
+# dev Cortex: analyzer API keys
+dev/analyzers.local.json

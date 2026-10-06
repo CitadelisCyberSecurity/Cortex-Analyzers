@@ -1,0 +1,117 @@
+<!-- ProxyCheck long report. "content" is the analyzer's full report: {query, resolved, status, message, results[]}. -->
+<div class="panel panel-info" ng-if="success">
+    <div class="panel-heading">
+        ProxyCheck report for <strong>{{(artifact.data || artifact.attachment.name) | fang}}</strong>
+    </div>
+    <div class="panel-body">
+        <div class="alert alert-warning" ng-if="content.status === 'warning' && content.message">
+            <i class="fa fa-warning"></i> {{content.message}}
+        </div>
+        <p ng-if="content.resolved">
+            Resolved to {{content.results.length}} IP address{{content.results.length === 1 ? '' : 'es'}}.
+        </p>
+        <p ng-if="!content.results.length">No result returned by proxycheck.io.</p>
+    </div>
+</div>
+
+<div class="panel panel-default" ng-if="success" ng-repeat="r in content.results">
+    <div class="panel-heading">
+        <strong>{{r.ip | fang}}</strong>
+        <span class="label label-danger" ng-if="r.detections.tor">Tor</span>
+        <span class="label label-danger" ng-if="r.detections.compromised">Compromised</span>
+        <span class="label label-warning" ng-if="r.detections.proxy">Proxy</span>
+        <span class="label label-warning" ng-if="r.detections.vpn">VPN</span>
+        <span class="label label-warning" ng-if="r.detections.scraper">Scraper</span>
+        <span class="label label-info" ng-if="r.detections.hosting">Hosting</span>
+        <span class="label label-success"
+              ng-if="!r.detections.tor && !r.detections.compromised && !r.detections.proxy && !r.detections.vpn && !r.detections.scraper">No anonymizer</span>
+    </div>
+    <div class="panel-body">
+        <h4>Detections</h4>
+        <dl class="dl-horizontal">
+            <dt>Risk</dt>
+            <dd>
+                <span class="label"
+                      ng-class="{'label-danger': r.detections.risk >= 76, 'label-warning': r.detections.risk >= 51 && r.detections.risk < 76, 'label-info': r.detections.risk >= 26 && r.detections.risk < 51, 'label-success': r.detections.risk < 26}">
+                    {{r.detections.risk}}
+                </span>
+                <span ng-if="r.detections.confidence !== undefined && r.detections.confidence !== null">
+                    (confidence {{r.detections.confidence}})
+                </span>
+            </dd>
+            <dt>Anonymous</dt>
+            <dd>{{r.detections.anonymous ? 'Yes' : 'No'}}</dd>
+            <dt ng-if-start="r.detections.first_seen">First seen</dt>
+            <dd ng-if-end>{{r.detections.first_seen}}</dd>
+            <dt ng-if-start="r.detections.last_seen">Last seen</dt>
+            <dd ng-if-end>{{r.detections.last_seen}}</dd>
+        </dl>
+
+        <div ng-if="r.operator && r.operator.name">
+            <h4>Operator</h4>
+            <dl class="dl-horizontal">
+                <dt>Name</dt>
+                <dd>
+                    <a ng-if="r.operator.url" ng-href="{{r.operator.url}}" target="_blank" rel="noopener noreferrer">{{r.operator.name}}</a>
+                    <span ng-if="!r.operator.url">{{r.operator.name}}</span>
+                </dd>
+                <dt ng-if-start="r.operator.anonymity">Anonymity</dt>
+                <dd ng-if-end>{{r.operator.anonymity}}</dd>
+                <dt ng-if-start="r.operator.popularity">Popularity</dt>
+                <dd ng-if-end>{{r.operator.popularity}}</dd>
+                <dt ng-if-start="r.operator.services.length">Services</dt>
+                <dd ng-if-end>{{r.operator.services.join(', ')}}</dd>
+                <dt ng-if-start="r.operator.protocols.length">Protocols</dt>
+                <dd ng-if-end>{{r.operator.protocols.join(', ')}}</dd>
+            </dl>
+        </div>
+
+        <div ng-if="r.attack_history.length">
+            <h4>Attack history</h4>
+            <dl class="dl-horizontal">
+                <dt ng-repeat-start="a in r.attack_history">{{a.type}}</dt>
+                <dd ng-repeat-end>{{a.count}}</dd>
+            </dl>
+        </div>
+
+        <h4>Network</h4>
+        <dl class="dl-horizontal">
+            <dt>ASN</dt>
+            <dd>{{r.network.asn || '-'}}</dd>
+            <dt>Range</dt>
+            <dd>{{r.network.range || '-'}}</dd>
+            <dt>Provider</dt>
+            <dd>{{r.network.provider || '-'}}</dd>
+            <dt>Organisation</dt>
+            <dd>{{r.network.organisation || '-'}}</dd>
+            <dt>Type</dt>
+            <dd>{{r.network.type || '-'}}</dd>
+            <dt>Hostname</dt>
+            <dd>{{(r.network.hostname | fang) || '-'}}</dd>
+        </dl>
+
+        <h4>Location</h4>
+        <dl class="dl-horizontal">
+            <dt>Country</dt>
+            <dd>{{r.location.country || '-'}} <span ng-if="r.location.country_code">({{r.location.country_code}})</span></dd>
+            <dt>City</dt>
+            <dd>{{r.location.city || '-'}}</dd>
+            <dt>Continent</dt>
+            <dd>{{r.location.continent || '-'}}</dd>
+        </dl>
+
+        <p class="text-muted" ng-if="r.last_updated">Last updated by proxycheck.io: {{r.last_updated}}</p>
+    </div>
+</div>
+
+<div class="panel panel-danger" ng-if="!success">
+    <div class="panel-heading">
+        <strong>{{(artifact.data || artifact.attachment.name) | fang}}</strong>
+    </div>
+    <div class="panel-body">
+        <dl class="dl-horizontal" ng-if="content && content.errorMessage">
+            <dt><i class="fa fa-warning"></i> ProxyCheck:</dt>
+            <dd class="wrap">{{content.errorMessage}}</dd>
+        </dl>
+    </div>
+</div>

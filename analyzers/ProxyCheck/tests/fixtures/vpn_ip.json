@@ -1,0 +1,54 @@
+{
+    "status": "ok",
+    "203.0.113.10": {
+        "network": {
+            "asn": "AS60068",
+            "range": "203.0.113.0/24",
+            "hostname": "unn-203-0-113-10.example-vpn.net",
+            "provider": "Example Datacamp",
+            "organisation": "Example VPN Ltd",
+            "type": "Hosting"
+        },
+        "location": {
+            "continent": "Europe",
+            "country": "Netherlands",
+            "country_code": "NL",
+            "city": "Amsterdam",
+            "latitude": 52.3759,
+            "longitude": 4.8975
+        },
+        "detections": {
+            "proxy": false,
+            "vpn": true,
+            "tor": false,
+            "scraper": false,
+            "compromised": false,
+            "hosting": true,
+            "anonymous": true,
+            "risk": 66,
+            "confidence": 100,
+            "first_seen": "2026-01-14T09:12:44Z",
+            "last_seen": "2026-10-05T22:01:03Z"
+        },
+        "attack_history": [
+            {"type": "login_attempt", "count": 5}
+        ],
+        "operator": {
+            "name": "ExampleVPN",
+            "url": "https://example-vpn.net",
+            "anonymity": "high",
+            "popularity": "medium",
+            "services": ["datacenter_vpns"],
+            "protocols": ["WireGuard", "OpenVPN"],
+            "policies": {
+                "ad_filtering": true,
+                "free_access": false,
+                "paid_access": true,
+                "logging": false,
+                "anonymous_payments": true
+            },
+            "additional_operators": null
+        },
+        "last_updated": "2026-10-05T22:01:03Z"
+    }
+}
