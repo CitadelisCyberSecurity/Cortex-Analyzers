@@ -54,6 +54,8 @@ def test_replaces_every_token(tmp_path):
     assert flavor["dataTypeList"] == ["ip", "domain"]
     assert flavor["author"] == "Citadelis"
     assert flavor["version"] == "1.0"
+    # Must pass utils/validate-analyzers.sh and match the image name build.yml publishes.
+    assert flavor["dockerImage"] == "ghcr.io/citadeliscybersecurity/shodan:devel"
 
 
 def test_leaves_python_dunders_alone(tmp_path):

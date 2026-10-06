@@ -154,6 +154,9 @@ def main(argv=None):
         f"  3. pip install -r analyzers/{args.name}/requirements.txt "
         f"-r analyzers/{args.name}/tests/requirements-test.txt\n"
         f"  4. pytest analyzers/{args.name}/tests\n"
+        f"  5. Add a build-only service to dev/docker-compose.yml with "
+        f"image: ghcr.io/citadeliscybersecurity/{args.name.lower()}:devel\n"
+        "  6. bash utils/validate-analyzers.sh\n"
         "See docs/creating-an-analyzer.md for details."
     )
     return 0

@@ -37,7 +37,7 @@ In `shodan.py`:
 
 Keep all HTTP inside `_request()`. It already handles timeouts, auth failures, rate limits, 404 → "not found", and other HTTP errors, with messages that end up in IRIS. `_request()` also redacts the API key from error messages. A crash in `summary()` fails the job instead of silently sending no taxonomies.
 
-In `Shodan.json`: `description`, `service_homepage`, and the `registration_required` / `subscription_required` / `free_subscription` flags. Add extra `configurationItems` if the service needs them. In `README.md`: fill in each section.
+In `Shodan.json`: leave `dockerImage` as generated (`ghcr.io/citadeliscybersecurity/<name>:devel`). Every `dockerImage` must start with `ghcr.io/citadeliscybersecurity/`, or the PR fails `definitions-check`. Also fill in `description`, `service_homepage`, and the `registration_required` / `subscription_required` / `free_subscription` flags. Add extra `configurationItems` if the service needs them. In `README.md`: fill in each section.
 
 ## 3. Taxonomies are the contract with Shuffle
 
@@ -81,12 +81,15 @@ python analyzers/Shodan/shodan.py /tmp/job && cat /tmp/job/output/output.json
 
 Or use `utils/analyzer-runlocal.py`. Never commit the job folder; it contains your key.
 
+To run it inside a real Cortex, add a build-only service to `dev/docker-compose.yml` like `proxycheck`, with `image:` set to the flavor's `dockerImage`. See `dev/README.md`.
+
 ## 6. Open a PR
 
 The `tests` workflow (`.github/workflows/tests.yml`) runs on every PR:
 
 - `test (<Analyzer>)`: one job per analyzer that has a `tests/` folder, each with only that analyzer's requirements installed.
 - `template-check`: tests `utils/new-analyzer.py`, then scaffolds a throwaway analyzer and runs its generated tests.
+- `definitions-check`: runs `utils/validate-analyzers.sh` on every flavor JSON (required fields, name rules, `dockerImage` registry). Run it locally first with `bash utils/validate-analyzers.sh` (needs `jq`).
 - `tests-passed`: one aggregate result.
 
 `tests/` is excluded from the Docker image by the analyzer's `.dockerignore`.
