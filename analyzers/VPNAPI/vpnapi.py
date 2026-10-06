@@ -2,7 +2,7 @@
 
 import ipaddress
 import socket
-from urllib.parse import urlparse
+from urllib.parse import quote, quote_plus, urlparse
 
 import requests
 
@@ -15,6 +15,7 @@ class VPNAPIAnalyzer(Analyzer):
     """
 
     API_URL = "https://vpnapi.io/api/{}"
+    USER_AGENT = "citadelis-cortex-vpnapi/1.0"
 
     @staticmethod
     def _is_ip(value):
@@ -40,12 +41,21 @@ class VPNAPIAnalyzer(Analyzer):
 
     def _lookup(self, ip, key):
         """Query VPNAPI.io for a single IP"""
-        response = requests.get(
-            self.API_URL.format(ip),
-            params={"key": key},
-            headers={"User-Agent": "strangebee-thehive/1.0"},
-            timeout=30,
-        )
+        try:
+            response = requests.get(
+                self.API_URL.format(ip),
+                params={"key": key},
+                headers={"User-Agent": self.USER_AGENT},
+                timeout=30,
+            )
+        except requests.exceptions.Timeout:
+            self.error("Request to VPNAPI.io timed out after 30s")
+        except requests.exceptions.RequestException as e:
+            # The key is in the query string, which requests includes in its errors
+            message = str(e)
+            for form in (key, quote(key, safe=""), quote_plus(key)):
+                message = message.replace(form, "REMOVED")
+            self.error(f"Unable to reach VPNAPI.io API: {message}")
         try:
             json_response = response.json()
         except ValueError:
@@ -86,7 +96,8 @@ class VPNAPIAnalyzer(Analyzer):
             data = self.get_data()
 
             ips, resolved = self._hosts_for_observable(data, limit)
-            results = [self._lookup(ip, key) for ip in ips]
+            # Drop responses without security data so they don't read as "safe"
+            results = [r for r in (self._lookup(ip, key) for ip in ips) if isinstance(r.get("security"), dict)]
 
             self.report({"query": data, "resolved": resolved, "results": results})
         except Exception as e:
@@ -96,7 +107,8 @@ class VPNAPIAnalyzer(Analyzer):
         taxonomies = []
         results = raw.get("results") or []
         if not results:
-            return {"taxonomies": taxonomies}
+            # Every successful run needs at least one taxonomy for Shuffle to match on
+            return {"taxonomies": [self.build_taxonomy("info", "VPNAPI", "Found", "False")]}
 
         flagged = {"tor": 0, "vpn": 0, "proxy": 0, "relay": 0}
         countries = []

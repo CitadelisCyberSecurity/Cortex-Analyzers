@@ -2,7 +2,7 @@
     "name": "VPNAPI",
     "version": "1.0",
     "author": "Mahmoud Maz",
-    "url": "https://github.com/TheHive-Project/Cortex-Analyzers",
+    "url": "https://github.com/CitadelisCyberSecurity/Cortex-Analyzers",
     "license": "AGPL-V3",
     "description": "Check whether an IP address (or the IPs a domain, FQDN or URL resolves to) is a VPN, proxy, Tor exit node or relay using VPNAPI.io. Also returns location and ASN information.",
     "dataTypeList": ["ip", "domain", "fqdn", "url"],

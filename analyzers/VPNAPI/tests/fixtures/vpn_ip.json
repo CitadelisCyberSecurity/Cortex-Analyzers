@@ -1,0 +1,29 @@
+{
+    "ip": "203.0.113.10",
+    "security": {
+        "vpn": true,
+        "proxy": false,
+        "tor": false,
+        "relay": false
+    },
+    "location": {
+        "city": "Amsterdam",
+        "region": "North Holland",
+        "country": "Netherlands",
+        "continent": "Europe",
+        "region_code": "NH",
+        "country_code": "NL",
+        "continent_code": "EU",
+        "latitude": "52.3740",
+        "longitude": "4.8897",
+        "time_zone": "Europe/Amsterdam",
+        "locale_code": "nl",
+        "metro_code": "",
+        "is_in_european_union": true
+    },
+    "network": {
+        "network": "203.0.113.0/24",
+        "autonomous_system_number": "AS60068",
+        "autonomous_system_organization": "Datacamp Limited"
+    }
+}

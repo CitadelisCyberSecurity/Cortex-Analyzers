@@ -16,3 +16,4 @@ You need a VPNAPI.io API key. The free tier allows 1,000 requests per day.
 - `VPNAPI:VPN`, `VPNAPI:Proxy`, `VPNAPI:Relay`: suspicious
 - `VPNAPI:Anonymizer="None"`: safe
 - `VPNAPI:Country`, `VPNAPI:ASN`: info
+- `VPNAPI:Found="False"`: info, when VPNAPI.io returned no security data for any checked IP
