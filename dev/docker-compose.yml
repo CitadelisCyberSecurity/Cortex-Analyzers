@@ -63,7 +63,7 @@ services:
   proxycheck:
     profiles: [analyzers]
     build: ../analyzers/ProxyCheck
-    image: customimages/proxycheck:1.0
+    image: ghcr.io/citadeliscybersecurity/proxycheck:devel
 
 volumes:
   es-data:

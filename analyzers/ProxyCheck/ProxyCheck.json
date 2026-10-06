@@ -8,7 +8,7 @@
     "dataTypeList": ["ip", "domain", "fqdn", "url"],
     "baseConfig": "ProxyCheck",
     "command": "ProxyCheck/proxycheck.py",
-    "dockerImage": "customimages/proxycheck:1.0",
+    "dockerImage": "ghcr.io/citadeliscybersecurity/proxycheck:devel",
     "configurationItems": [
         {
             "name": "key",
