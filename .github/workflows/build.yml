@@ -164,7 +164,9 @@ jobs:
             # Runtime stage
             echo "# Runtime stage" >> "$dockerfile_path"
             echo "FROM python:3-slim" >> "$dockerfile_path"
-            
+            # pip is only needed to build; Trivy flags the libraries it vendors.
+            echo "RUN pip uninstall -y pip && rm -rf /usr/local/lib/python3*/ensurepip" >> "$dockerfile_path"
+
             # Check if current worker needs runtime libraries
             if echo "$special_alpine_workers" | grep -qw "$matrix_directory"; then
               echo "RUN apt-get update && apt-get install -y --no-install-recommends libmagic1 && rm -rf /var/lib/apt/lists/*" >> "$dockerfile_path"
