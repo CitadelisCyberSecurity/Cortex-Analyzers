@@ -18,3 +18,4 @@ An API key is optional. Without one, you can make 100 queries per day. A free re
 - `ProxyCheck:Anonymizer="None"`: safe
 - `ProxyCheck:Risk`: the highest risk score across the checked IPs. 0-25 is safe, 26-50 info, 51-75 suspicious and 76-100 malicious
 - `ProxyCheck:Country`, `ProxyCheck:ASN`: info
+- `ProxyCheck:Found="False"`: info, when proxycheck.io returned no data for any checked IP

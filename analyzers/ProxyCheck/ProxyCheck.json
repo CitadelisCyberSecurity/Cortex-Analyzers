@@ -2,7 +2,7 @@
     "name": "ProxyCheck",
     "version": "1.0",
     "author": "Mahmoud Maz",
-    "url": "https://github.com/TheHive-Project/Cortex-Analyzers",
+    "url": "https://github.com/CitadelisCyberSecurity/Cortex-Analyzers",
     "license": "AGPL-V3",
     "description": "Check whether an IP address (or the IPs a domain, FQDN or URL resolves to) is a proxy, VPN, Tor exit node, scraper, compromised or hosting address using proxycheck.io. Also returns a risk score, operator, location and ASN information.",
     "dataTypeList": ["ip", "domain", "fqdn", "url"],

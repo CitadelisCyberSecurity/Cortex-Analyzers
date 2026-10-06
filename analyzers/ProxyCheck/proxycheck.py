@@ -2,7 +2,7 @@
 
 import ipaddress
 import socket
-from urllib.parse import urlparse
+from urllib.parse import quote, quote_plus, urlparse
 
 import requests
 
@@ -15,6 +15,7 @@ class ProxyCheckAnalyzer(Analyzer):
     """
 
     API_URL = "https://proxycheck.io/v3/{}"
+    USER_AGENT = "citadelis-cortex-proxycheck/1.0"
 
     @staticmethod
     def _is_ip(value):
@@ -43,12 +44,22 @@ class ProxyCheckAnalyzer(Analyzer):
         params = {"tag": 0}
         if key:
             params["key"] = key
-        response = requests.get(
-            self.API_URL.format(",".join(ips)),
-            params=params,
-            headers={"User-Agent": "strangebee-thehive/1.0"},
-            timeout=30,
-        )
+        try:
+            response = requests.get(
+                self.API_URL.format(",".join(ips)),
+                params=params,
+                headers={"User-Agent": self.USER_AGENT},
+                timeout=30,
+            )
+        except requests.exceptions.Timeout:
+            self.error("Request to proxycheck.io timed out after 30s")
+        except requests.exceptions.RequestException as e:
+            # The key is in the query string, which requests includes in its errors
+            message = str(e)
+            if key:
+                for form in (key, quote(key, safe=""), quote_plus(key)):
+                    message = message.replace(form, "REMOVED")
+            self.error(f"Unable to reach proxycheck.io API: {message}")
         try:
             json_response = response.json()
         except ValueError:
@@ -106,7 +117,8 @@ class ProxyCheckAnalyzer(Analyzer):
         taxonomies = []
         results = raw.get("results") or []
         if not results:
-            return {"taxonomies": taxonomies}
+            # Every successful run needs at least one taxonomy for Shuffle to match on
+            return {"taxonomies": [self.build_taxonomy("info", "ProxyCheck", "Found", "False")]}
 
         flagged = {"tor": 0, "compromised": 0, "proxy": 0, "vpn": 0, "scraper": 0, "hosting": 0}
         countries = []
