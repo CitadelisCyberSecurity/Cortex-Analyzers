@@ -8,7 +8,7 @@
     "dataTypeList": ["ip", "domain", "fqdn", "url"],
     "baseConfig": "VPNAPI",
     "command": "VPNAPI/vpnapi.py",
-    "dockerImage": "customimages/vpnapi:1.0",
+    "dockerImage": "ghcr.io/citadeliscybersecurity/vpnapi:devel",
     "configurationItems": [
         {
             "name": "key",

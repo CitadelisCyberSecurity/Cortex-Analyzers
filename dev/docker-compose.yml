@@ -68,7 +68,7 @@ services:
   vpnapi:
     profiles: [analyzers]
     build: ../analyzers/VPNAPI
-    image: customimages/vpnapi:1.0
+    image: ghcr.io/citadeliscybersecurity/vpnapi:devel
 
 volumes:
   es-data:
