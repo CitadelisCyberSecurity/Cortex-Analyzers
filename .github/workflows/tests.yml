@@ -81,12 +81,24 @@ jobs:
       - name: Test the scaffolding script and the template it generates
         run: python -m pytest utils/tests -v
 
+  definitions-check:
+    name: definitions-check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Validate analyzer definitions
+        env:
+          OWNER: ${{ github.repository_owner }}
+        run: bash utils/validate-analyzers.sh "$OWNER"
+
   # Single stable check name for branch protection; matrix job names change
   # whenever an analyzer is added.
   tests-passed:
     name: tests-passed
     if: always()
-    needs: [discover, analyzer-tests, template-check]
+    needs: [discover, analyzer-tests, template-check, definitions-check]
     runs-on: ubuntu-latest
     steps:
       - name: Check results
@@ -94,8 +106,10 @@ jobs:
           DISCOVER: ${{ needs.discover.result }}
           ANALYZERS: ${{ needs.analyzer-tests.result }}
           TEMPLATE: ${{ needs.template-check.result }}
+          DEFINITIONS: ${{ needs.definitions-check.result }}
         run: |
-          echo "discover=$DISCOVER analyzer-tests=$ANALYZERS template-check=$TEMPLATE"
+          echo "discover=$DISCOVER analyzer-tests=$ANALYZERS template-check=$TEMPLATE definitions-check=$DEFINITIONS"
           [ "$DISCOVER" = "success" ] || exit 1
           [ "$ANALYZERS" = "success" ] || [ "$ANALYZERS" = "skipped" ] || exit 1
           [ "$TEMPLATE" = "success" ] || exit 1
+          [ "$DEFINITIONS" = "success" ] || exit 1
