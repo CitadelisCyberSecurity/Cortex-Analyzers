@@ -175,7 +175,25 @@ def test_not_found_is_safe(run_analyzer, mocked_api):
     assert output["full"] == {"query_type": "other", "found": False, **EMPTY, "truncated": False}
 
 
-def test_purple_ai_error_is_ignored(run_analyzer, mocked_api, load_fixture):
+def test_purple_ai_error_nulls_data_then_retries_alert_only(run_analyzer, mocked_api, analyzer_class, load_fixture):
+    body = load_fixture("edr_alert.json")
+    del body["data"]["aiInvestigations"]
+    mocked_api.post(
+        GQL_URL, json={"data": None, "errors": [{"message": "license", "path": ["aiInvestigations"]}]}
+    )
+    mocked_api.post(GQL_URL, json=body)
+
+    output = run_analyzer(ID)
+
+    assert output["success"] is True
+    assert output["full"]["purple_ai"] == {}
+    assert output["full"]["found"] is True
+    assert len(mocked_api.calls) == 2
+    second = json.loads(mocked_api.calls[1].request.body)
+    assert second == {"query": analyzer_class.ALERT_ONLY_QUERY, "variables": {"id": ID}}
+
+
+def test_purple_ai_error_with_alert_present_is_ignored(run_analyzer, mocked_api, load_fixture):
     body = load_fixture("edr_alert.json")
     body["data"]["aiInvestigations"] = None
     body["errors"] = [{"message": "license", "path": ["aiInvestigations"]}]
@@ -185,6 +203,27 @@ def test_purple_ai_error_is_ignored(run_analyzer, mocked_api, load_fixture):
 
     assert output["success"] is True
     assert output["full"]["purple_ai"] == {}
+    assert len(mocked_api.calls) == 1
+
+
+@pytest.mark.parametrize("body", [{"data": None}, {}, {"data": {}}])
+def test_missing_data_fails_the_job(run_analyzer, mocked_api, body):
+    mocked_api.post(GQL_URL, json=body)
+
+    output = run_analyzer(ID)
+
+    assert output["success"] is False
+
+
+def test_not_found_on_another_path_is_not_a_safe_result(run_analyzer, mocked_api):
+    mocked_api.post(
+        GQL_URL,
+        json={"data": {"alert": None}, "errors": [{"message": "Thing not found", "path": ["aiInvestigations"]}]},
+    )
+
+    output = run_analyzer(ID)
+
+    assert output["success"] is False
 
 
 def test_purple_ai_in_progress_has_no_taxonomy(run_analyzer, mocked_api, load_fixture):
@@ -232,6 +271,7 @@ def test_caps_and_truncation(run_analyzer, mocked_api, load_fixture):
     alert = body["data"]["alert"]
     alert["process"]["cmdLine"] = "x" * 1500
     alert["rawData"] = {"blob": "y" * 50000}
+    body["data"]["aiInvestigations"][0]["result"] = "z" * 2500
     template = alert["indicators"][0]
     alert["indicators"] = [
         {**copy.deepcopy(template), "eventTime": f"2026-11-20T11:00:{n % 60:02d}.{n:03d}Z", "observables": []}
@@ -244,6 +284,7 @@ def test_caps_and_truncation(run_analyzer, mocked_api, load_fixture):
     full = output["full"]
     assert len(full["process"]["command_line"]) == 1000
     assert len(full["raw_data"]) == 4000
+    assert len(full["purple_ai"]["result"]) == 2000
     assert len(full["indicators"]) == 50
     assert full["truncated"] is True
     # The Indicators taxonomy counts the indicators kept in the report.
@@ -261,6 +302,9 @@ def test_read_only_single_fixed_query(run_analyzer, mocked_api, analyzer_class, 
     assert request.method == "POST"
     assert request.url.endswith(analyzer_class.GRAPHQL_PATH)
     assert json.loads(body) == {"query": analyzer_class.QUERY, "variables": {"id": ID}}
+    assert analyzer_class.ALERT_ONLY_QUERY.lstrip().startswith("query ")
+    assert "mutation" not in analyzer_class.ALERT_ONLY_QUERY
+    assert "aiInvestigations" not in analyzer_class.ALERT_ONLY_QUERY
     assert "mutation" not in body
     assert analyzer_class.QUERY.lstrip().startswith("query ")
     assert request.headers["Authorization"] == "ApiToken test-token"

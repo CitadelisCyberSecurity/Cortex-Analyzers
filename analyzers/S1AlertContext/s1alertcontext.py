@@ -31,10 +31,9 @@ MAX_OBSERVABLES = 100
 MAX_ASSETS = 20
 MAX_RELATED = 20
 
+LIMITS = {"command_line": MAX_COMMAND_LINE, "result": MAX_PURPLE_RESULT}
 OBSERVABLE = "{ type typeName name value }"
-_QUERY = f"""query S1AlertContext($id: ID!) {{
-  alert(id: $id) {{
-    id externalId name description severity status confidenceLevel classification analystVerdict
+_ALERT_FIELDS = f"""id externalId name description severity status confidenceLevel classification analystVerdict
     detectionSource {{ product vendor }}
     attackSurfaces detectedAt firstSeenAt lastSeenAt storylineId selfLink
     assets {{ name category subcategory osVersion lastLoggedInUser agentUuid primary tags {{ key value }} }}
@@ -46,14 +45,24 @@ _QUERY = f"""query S1AlertContext($id: ID!) {{
     observables {OBSERVABLE}
     process {{ cmdLine parentName username userDomain file {{ path sha1 sha256 }} }}
     relatedAlerts {{ id name }}
-    rawData
+    rawData"""
+QUERY = f"""query S1AlertContext($id: ID!) {{
+  alert(id: $id) {{
+    {_ALERT_FIELDS}
   }}
   aiInvestigations(alertIds: [$id]) {{ status verdict result timestamp }}
+}}"""
+# Fallback when Purple AI errors null the whole response (see _lookup_alert).
+ALERT_ONLY_QUERY = f"""query S1AlertContextAlertOnly($id: ID!) {{
+  alert(id: $id) {{
+    {_ALERT_FIELDS}
+  }}
 }}"""
 
 
 class S1AlertContextAnalyzer(Analyzer):
-    QUERY = _QUERY
+    QUERY = QUERY
+    ALERT_ONLY_QUERY = ALERT_ONLY_QUERY
     GRAPHQL_PATH = "/web/api/v2.1/unifiedalerts/graphql"
     # Taxonomy namespace. Shuffle and n8n match on it: don't rename it.
     NAMESPACE = "S1AlertContext"
@@ -89,16 +98,16 @@ class S1AlertContextAnalyzer(Analyzer):
             text = text.replace(form, "REMOVED")
         return text
 
-    def _request(self, variables):
+    def _request(self, variables, query=None):
         """POST the fixed query and return the parsed JSON body.
 
-        This is the analyzer's single HTTP entry point. It always sends QUERY
-        as is; only the variables change. Any failure ends the job through
+        This is the analyzer's single HTTP entry point. It only ever sends
+        QUERY or ALERT_ONLY_QUERY as is; only the variables change. Any failure ends the job through
         self.error().
         """
         try:
             response = self.session.post(
-                self.endpoint, json={"query": self.QUERY, "variables": variables}, timeout=self.timeout
+                self.endpoint, json={"query": query or self.QUERY, "variables": variables}, timeout=self.timeout
             )
         except requests.exceptions.Timeout:
             self.error(f"{self.NAMESPACE}: request timed out after {self.timeout}s")
@@ -136,7 +145,7 @@ class S1AlertContextAnalyzer(Analyzer):
     def _clean(self, record):
         """Drop empty fields and cut long strings (command lines get more room)."""
         return {
-            k: self._cut(v, MAX_COMMAND_LINE if k == "command_line" else MAX_STRING)
+            k: self._cut(v, LIMITS.get(k, MAX_STRING))
             for k, v in record.items()
             if v not in (None, "", [])
         }
@@ -237,7 +246,7 @@ class S1AlertContextAnalyzer(Analyzer):
             {
                 "status": ai.get("status"),
                 "verdict": ai.get("verdict"),
-                "result": self._cut(ai.get("result"), MAX_PURPLE_RESULT),
+                "result": ai.get("result"),
                 "timestamp": ai.get("timestamp"),
             }
         )
@@ -263,17 +272,35 @@ class S1AlertContextAnalyzer(Analyzer):
         if not ALERT_ID_RE.fullmatch(alert_id):
             self.error(f"{self.NAMESPACE}: observable must be a UAM alert ID (1-64 letters, digits or dashes)")
 
-        body = self._request({"id": alert_id}) or {}
-        data = body.get("data") or {}
+        variables = {"id": alert_id}
+        body = self._request(variables)
+        body = body if isinstance(body, dict) else {}
+        errors = [e for e in body.get("errors") or [] if isinstance(e, dict)]
+
+        def first_path(e):
+            path = e.get("path")
+            return path[0] if isinstance(path, list) and path else None
+
+        data = body.get("data")
+        if data is None and errors and all(first_path(e) == "aiInvestigations" for e in errors):
+            # alert and aiInvestigations are non-null in the schema, so a Purple AI
+            # error (e.g. no license) nulls all of data. Retry without Purple AI.
+            body = self._request(variables, self.ALERT_ONLY_QUERY)
+            body = body if isinstance(body, dict) else {}
+            errors = [e for e in body.get("errors") or [] if isinstance(e, dict)]
+            data = body.get("data")
+        data = data if isinstance(data, dict) else {}
         alert = data.get("alert")
-        if alert:
-            # Purple AI errors (e.g. no license) must not fail the alert lookup.
+        if alert is not None:
             return self._report(alert, data.get("aiInvestigations"))
 
-        errors = body.get("errors") or []
-        messages = [str(e.get("message", "")) for e in errors if isinstance(e, dict)]
-        # shortcut: not-found detection matches error text, confirm against a real tenant response
-        if not messages or any(re.search("not found", m, re.IGNORECASE) for m in messages):
+        messages = [str(e.get("message", "")) for e in errors]
+        # shortcut: not-found detection matches error text, and the Purple AI null-propagation
+        # retry assumes the schema's non-null behaviour; confirm both against a real tenant response
+        if any(
+            first_path(e) in (None, "alert") and re.search("not found", str(e.get("message", "")), re.IGNORECASE)
+            for e in errors
+        ):
             return {
                 "query_type": "other",
                 "found": False,
@@ -287,7 +314,8 @@ class S1AlertContextAnalyzer(Analyzer):
                 "raw_data": "",
                 "truncated": False,
             }
-        self.error(f"{self.NAMESPACE}: GraphQL error: {self._redact('; '.join(messages))[:MAX_STRING]}")
+        detail = self._redact("; ".join(messages))[:MAX_STRING] or "no data in response"
+        self.error(f"{self.NAMESPACE}: GraphQL error: {detail}")
 
     def run(self):
         try:
