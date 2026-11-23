@@ -131,6 +131,16 @@ def main():
             {k: v for k, v in flavor.get("config", {}).items() if k in ("check_tlp", "max_tlp", "check_pap", "max_pap")}
         )
         configuration.update(local_config.get(definition_id, {}))
+        # Cortex rejects an analyzer without its required config; skip it so the
+        # others still get set up and the new API key below still gets printed.
+        missing = [
+            item["name"]
+            for item in flavor.get("configurationItems", [])
+            if item.get("required") and configuration.get(item["name"]) in (None, "")
+        ]
+        if missing:
+            print(f"Skipped analyzer {definition_id}: set {', '.join(missing)} in {LOCAL_CONFIG.name}")
+            continue
         if definition_id in enabled_ids:
             cortex.call(
                 "PATCH",
