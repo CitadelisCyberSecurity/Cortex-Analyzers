@@ -1,12 +1,19 @@
 #!/usr/bin/env python3
 """S1AlertContext analyzer for Cortex.
 
-Generated from templates/analyzer. Every spot that needs service-specific
-code is marked "TODO:". See docs/creating-an-analyzer.md.
+Takes a SentinelOne Unified Alert Management (UAM) alert ID and returns the
+alert's details, assets, indicators, observables, process, Purple AI's
+investigation and the source's raw alert, in one shape for every source.
 
-API docs: TODO: link to the service's API documentation.
+UAM is GraphQL only, so this analyzer POSTs. It is read-only by construction:
+it sends one hard-coded query document, the alert ID travels only as a
+variable, and a test asserts the request body.
+
+API: POST <console>/web/api/v2.1/unifiedalerts/graphql
 """
 
+import json
+import re
 import sys
 import traceback
 from urllib.parse import quote, quote_plus
@@ -14,64 +21,95 @@ from urllib.parse import quote, quote_plus
 import requests
 from cortexutils.analyzer import Analyzer
 
+ALERT_ID_RE = re.compile(r"[A-Za-z0-9-]{1,64}")
+MAX_STRING = 500
+MAX_COMMAND_LINE = 1000
+MAX_PURPLE_RESULT = 2000
+MAX_RAW_DATA = 4000
+MAX_INDICATORS = 50
+MAX_OBSERVABLES = 100
+MAX_ASSETS = 20
+MAX_RELATED = 20
+
+OBSERVABLE = "{ type typeName name value }"
+_QUERY = f"""query S1AlertContext($id: ID!) {{
+  alert(id: $id) {{
+    id externalId name description severity status confidenceLevel classification analystVerdict
+    detectionSource {{ product vendor }}
+    attackSurfaces detectedAt firstSeenAt lastSeenAt storylineId selfLink
+    assets {{ name category subcategory osVersion lastLoggedInUser agentUuid primary tags {{ key value }} }}
+    indicators {{
+      eventTime title type severity description
+      attacks {{ tactic {{ uid name }} technique {{ uid name }} }}
+      observables {OBSERVABLE}
+    }}
+    observables {OBSERVABLE}
+    process {{ cmdLine parentName username userDomain file {{ path sha1 sha256 }} }}
+    relatedAlerts {{ id name }}
+    rawData
+  }}
+  aiInvestigations(alertIds: [$id]) {{ status verdict result timestamp }}
+}}"""
+
 
 class S1AlertContextAnalyzer(Analyzer):
-    # TODO: set the service's API base URL.
-    BASE_URL = "https://api.example.com/v1"
-    # Taxonomy namespace. Shuffle workflows match on it: don't rename it once
-    # the analyzer is in use.
+    QUERY = _QUERY
+    GRAPHQL_PATH = "/web/api/v2.1/unifiedalerts/graphql"
+    # Taxonomy namespace. Shuffle and n8n match on it: don't rename it.
     NAMESPACE = "S1AlertContext"
     USER_AGENT = "citadelis-cortex-s1alertcontext/1.0"
 
-    # Score thresholds used by _level(). TODO: adjust to the service's scale.
-    MALICIOUS_THRESHOLD = 75
-    SUSPICIOUS_THRESHOLD = 1
-
-    # Data type -> handler method name. Must cover every type in the flavor's
-    # dataTypeList (a test checks this). TODO: add one handler per data type.
-    HANDLERS = {"ip": "_lookup_ip"}
+    HANDLERS = {"other": "_lookup_alert"}
 
     def __init__(self):
-        super().__init__()
-        self.api_key = self.get_param("config.key", None, "Missing API key")
+        # cortexutils echoes the config in error reports and only hides names
+        # containing its default phrases, which don't include "token".
+        super().__init__(secret_phrases=("key", "password", "secret", "token"))
+        self.api_token = self.get_param("config.api_token", None, "Missing API token")
+        url = str(self.get_param("config.url", None, "Missing console URL"))
+        if not url.lower().startswith("https://"):
+            # The token goes in a header: never send it over plain HTTP.
+            self.error(f"{self.NAMESPACE}: console URL must start with https://")
+        self.endpoint = url.rstrip("/") + self.GRAPHQL_PATH
         self.timeout = self.get_param("config.timeout", 30)
+        self.truncated = False
         self.session = requests.Session()
         self.session.headers.update(
             {
                 "Accept": "application/json",
                 "User-Agent": self.USER_AGENT,
-                # TODO: use the auth scheme the service expects.
-                "Authorization": f"Bearer {self.api_key}",
+                "Authorization": f"ApiToken {self.api_token}",
             }
         )
 
     def _redact(self, text):
-        if not self.api_key:
+        if not self.api_token:
             return text
-        # requests shows query-string keys URL-encoded, so redact those forms too.
-        for form in (self.api_key, quote(self.api_key, safe=""), quote_plus(self.api_key)):
+        for form in (self.api_token, quote(self.api_token, safe=""), quote_plus(self.api_token)):
             text = text.replace(form, "REMOVED")
         return text
 
-    def _request(self, method, path, **kwargs):
-        """Send one API request and return the parsed JSON body.
+    def _request(self, variables):
+        """POST the fixed query and return the parsed JSON body.
 
-        Returns None on 404: "not found" is a valid answer, not a failure.
-        Any other failure ends the job through self.error(), which writes the
-        error report and exits.
+        This is the analyzer's single HTTP entry point. It always sends QUERY
+        as is; only the variables change. Any failure ends the job through
+        self.error().
         """
-        url = f"{self.BASE_URL}{path}"
         try:
-            response = self.session.request(method, url, timeout=self.timeout, **kwargs)
+            response = self.session.post(
+                self.endpoint, json={"query": self.QUERY, "variables": variables}, timeout=self.timeout
+            )
         except requests.exceptions.Timeout:
             self.error(f"{self.NAMESPACE}: request timed out after {self.timeout}s")
         except requests.exceptions.RequestException as e:
             self.error(f"{self.NAMESPACE}: could not reach the API ({self._redact(str(e))})")
 
-        if response.status_code == 404:
-            return None
         if response.status_code in (401, 403):
-            self.error(f"{self.NAMESPACE}: authentication failed, check the API key")
+            self.error(
+                f"{self.NAMESPACE}: authentication failed (HTTP {response.status_code}), "
+                "check the API token and its scope"
+            )
         if response.status_code == 429:
             self.error(f"{self.NAMESPACE}: rate limited by the API, try again later")
         if not response.ok:
@@ -84,10 +122,172 @@ class S1AlertContextAnalyzer(Analyzer):
         except ValueError:
             self.error(f"{self.NAMESPACE}: API returned a response that is not JSON")
 
-    def _lookup_ip(self, ip):
-        # TODO: call the service's real endpoint for this data type.
-        data = self._request("GET", f"/ip/{ip}")
-        return {"query_type": "ip", "found": data is not None, "data": data}
+    def _cut(self, value, limit):
+        if isinstance(value, str) and len(value) > limit:
+            self.truncated = True
+            return value[:limit]
+        return value
+
+    def _cap(self, items, limit):
+        if len(items) > limit:
+            self.truncated = True
+        return items[:limit]
+
+    def _clean(self, record):
+        """Drop empty fields and cut long strings (command lines get more room)."""
+        return {
+            k: self._cut(v, MAX_COMMAND_LINE if k == "command_line" else MAX_STRING)
+            for k, v in record.items()
+            if v not in (None, "", [])
+        }
+
+    def _alert(self, a):
+        source = a.get("detectionSource") or {}
+        return self._clean(
+            {
+                "id": a.get("id"),
+                "external_id": a.get("externalId"),
+                "name": a.get("name"),
+                "description": a.get("description"),
+                "severity": a.get("severity"),
+                "status": a.get("status"),
+                "confidence": a.get("confidenceLevel"),
+                "classification": a.get("classification"),
+                "analyst_verdict": a.get("analystVerdict"),
+                "product": source.get("product"),
+                "vendor": source.get("vendor"),
+                "attack_surfaces": a.get("attackSurfaces"),
+                "detected_at": a.get("detectedAt"),
+                "first_seen_at": a.get("firstSeenAt"),
+                "last_seen_at": a.get("lastSeenAt"),
+                "storyline_id": a.get("storylineId"),
+                "link": a.get("selfLink"),
+            }
+        )
+
+    def _asset(self, a):
+        tags = [f"{t.get('key')}={t.get('value')}" for t in a.get("tags") or []]
+        return self._clean(
+            {
+                "name": a.get("name"),
+                "category": a.get("category"),
+                "subcategory": a.get("subcategory"),
+                "os": a.get("osVersion"),
+                "last_logged_in_user": a.get("lastLoggedInUser"),
+                "agent_uuid": a.get("agentUuid"),
+                "primary": a.get("primary"),
+                "tags": tags,
+            }
+        )
+
+    def _mitre(self, attack):
+        tactic = attack.get("tactic") or {}
+        technique = attack.get("technique") or {}
+        parts = [
+            " ".join(filter(None, (x.get("uid"), x.get("name")))) for x in (tactic, technique)
+        ]
+        return " / ".join(p for p in parts if p)
+
+    def _indicator(self, i):
+        return self._clean(
+            {
+                "time": i.get("eventTime"),
+                "title": i.get("title"),
+                "type": i.get("type"),
+                "severity": i.get("severity"),
+                "description": i.get("description"),
+                "mitre": [m for m in map(self._mitre, i.get("attacks") or []) if m],
+            }
+        )
+
+    def _observable(self, o):
+        return self._clean({"type": o.get("type") or o.get("typeName"), "name": o.get("name"), "value": o.get("value")})
+
+    def _process(self, p):
+        p = p or {}
+        file = p.get("file") or {}
+        user = "\\".join(filter(None, (p.get("userDomain"), p.get("username"))))
+        return self._clean(
+            {
+                "command_line": p.get("cmdLine"),
+                "parent": p.get("parentName"),
+                "user": user,
+                "file_path": file.get("path"),
+                "sha1": file.get("sha1"),
+                "sha256": file.get("sha256"),
+            }
+        )
+
+    def _report(self, alert, investigations):
+        indicators = sorted(alert.get("indicators") or [], key=lambda i: i.get("eventTime") or "")
+        indicators = self._cap(indicators, MAX_INDICATORS)
+
+        seen, observables = set(), []
+        for raw in (alert.get("observables") or []) + [o for i in indicators for o in i.get("observables") or []]:
+            o = self._observable(raw)
+            key = (o.get("type"), o.get("value"))
+            if key not in seen:
+                seen.add(key)
+                observables.append(o)
+
+        ai = (investigations or [None])[0] or {}
+        raw_data = alert.get("rawData")
+        raw_data = "" if raw_data is None else json.dumps(raw_data, separators=(",", ":"), ensure_ascii=False)
+        purple = self._clean(
+            {
+                "status": ai.get("status"),
+                "verdict": ai.get("verdict"),
+                "result": self._cut(ai.get("result"), MAX_PURPLE_RESULT),
+                "timestamp": ai.get("timestamp"),
+            }
+        )
+        return {
+            "query_type": "other",
+            "found": True,
+            "alert": self._alert(alert),
+            "assets": [self._asset(a) for a in self._cap(alert.get("assets") or [], MAX_ASSETS)],
+            "indicators": [self._indicator(i) for i in indicators],
+            "observables": self._cap(observables, MAX_OBSERVABLES),
+            "process": self._process(alert.get("process")),
+            "purple_ai": purple,
+            "related_alerts": [
+                self._clean({"id": r.get("id"), "name": r.get("name")})
+                for r in self._cap([r for r in alert.get("relatedAlerts") or [] if r], MAX_RELATED)
+            ],
+            "raw_data": self._cut(raw_data, MAX_RAW_DATA),
+            "truncated": self.truncated,
+        }
+
+    def _lookup_alert(self, value):
+        alert_id = str(value).strip()
+        if not ALERT_ID_RE.fullmatch(alert_id):
+            self.error(f"{self.NAMESPACE}: observable must be a UAM alert ID (1-64 letters, digits or dashes)")
+
+        body = self._request({"id": alert_id}) or {}
+        data = body.get("data") or {}
+        alert = data.get("alert")
+        if alert:
+            # Purple AI errors (e.g. no license) must not fail the alert lookup.
+            return self._report(alert, data.get("aiInvestigations"))
+
+        errors = body.get("errors") or []
+        messages = [str(e.get("message", "")) for e in errors if isinstance(e, dict)]
+        # shortcut: not-found detection matches error text, confirm against a real tenant response
+        if not messages or any(re.search("not found", m, re.IGNORECASE) for m in messages):
+            return {
+                "query_type": "other",
+                "found": False,
+                "alert": {},
+                "assets": [],
+                "indicators": [],
+                "observables": [],
+                "process": {},
+                "purple_ai": {},
+                "related_alerts": [],
+                "raw_data": "",
+                "truncated": False,
+            }
+        self.error(f"{self.NAMESPACE}: GraphQL error: {self._redact('; '.join(messages))[:MAX_STRING]}")
 
     def run(self):
         try:
@@ -106,53 +306,36 @@ class S1AlertContextAnalyzer(Analyzer):
         self.summary(full_report)
         super().report(full_report, ensure_ascii)
 
-    def _level(self, score):
-        if score >= self.MALICIOUS_THRESHOLD:
-            return "malicious"
-        if score >= self.SUSPICIOUS_THRESHOLD:
-            return "suspicious"
-        return "safe"
-
     def summary(self, raw):
-        """Taxonomies are the stable contract Shuffle parses.
-
-        Rules: one namespace (NAMESPACE), Title Case predicates that never get
-        renamed, malicious/suspicious/safe for verdicts and info for context,
-        and at least one taxonomy on every successful run.
-        """
+        """Taxonomies are a contract with n8n: never rename a predicate."""
+        ns = self.NAMESPACE
         if not raw.get("found"):
-            return {"taxonomies": [self.build_taxonomy("safe", self.NAMESPACE, "Found", "False")]}
+            return {"taxonomies": [self.build_taxonomy("safe", ns, "Found", "False")]}
 
-        data = raw.get("data") or {}
-        taxonomies = []
-        # TODO: map the service's fields to taxonomies.
-        score = data.get("score")
-        if score is not None:
-            taxonomies.append(
-                self.build_taxonomy(self._level(score), self.NAMESPACE, "Score", score)
-            )
-        reports = data.get("reports")
-        if reports is not None:
-            taxonomies.append(self.build_taxonomy("info", self.NAMESPACE, "Reports", reports))
-        if not taxonomies:
-            taxonomies.append(self.build_taxonomy("info", self.NAMESPACE, "Found", "True"))
+        alert = raw.get("alert") or {}
+        taxonomies = [self.build_taxonomy("info", ns, "Found", "True")]
+        confidence = alert.get("confidence")
+        if confidence:
+            level = confidence.lower() if confidence in ("MALICIOUS", "SUSPICIOUS") else "info"
+            taxonomies.append(self.build_taxonomy(level, ns, "Confidence", confidence))
+        for predicate, key in (
+            ("Severity", "severity"),
+            ("Product", "product"),
+            ("Status", "status"),
+            ("Verdict", "analyst_verdict"),
+        ):
+            if alert.get(key):
+                taxonomies.append(self.build_taxonomy("info", ns, predicate, alert[key]))
+        ai = raw.get("purple_ai") or {}
+        if ai.get("status") == "COMPLETED" and ai.get("verdict"):
+            # Purple AI's opinion never sets the alert's level.
+            taxonomies.append(self.build_taxonomy("info", ns, "PurpleAI", ai["verdict"]))
+        taxonomies.append(self.build_taxonomy("info", ns, "Indicators", len(raw.get("indicators") or [])))
         return {"taxonomies": taxonomies}
 
     def artifacts(self, raw):
-        data = raw.get("data") or {}
-        found = set()
-        # TODO: extract the related observables the service returns.
-        domain = (data.get("domain") or "").strip().rstrip(".").lower()
-        if domain:
-            found.add(("domain", domain))
-        for hostname in data.get("hostnames") or []:
-            hostname = (hostname or "").strip().rstrip(".").lower()
-            if hostname:
-                found.add(("fqdn", hostname))
-        return [
-            self.build_artifact(data_type, value, tags=[self.NAMESPACE])
-            for data_type, value in sorted(found)
-        ]
+        # v1: n8n doesn't read artifacts.
+        return []
 
 
 if __name__ == "__main__":
