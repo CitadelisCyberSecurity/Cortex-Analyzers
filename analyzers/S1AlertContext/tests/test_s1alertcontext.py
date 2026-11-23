@@ -159,6 +159,26 @@ def test_aws_alert_report(run_analyzer, mocked_api, load_fixture):
     assert full["purple_ai"] == {}
 
 
+def test_raw_data_drops_s1_noise_and_empty_values(run_analyzer, mocked_api, load_fixture):
+    response = load_fixture("aws_alert.json")
+    response["data"]["alert"]["rawData"] = {
+        "default_value_fields": "",
+        "cloud": {"region": "us-east-1", "default_value_fields": "", "zone": None},
+        "resources": [{"name": "key-1", "s1_metadata": {"site_name": "x"}, "internal_uid": "u", "labels": []}, {}],
+        "unmapped": {"action": {"api": "ListBuckets", "errorCode": "AccessDenied", "count": 0, "archived": False}},
+    }
+    mocked_api.post(GQL_URL, json=response)
+
+    output = run_analyzer(ID)
+
+    assert json.loads(output["full"]["raw_data"]) == {
+        "cloud": {"region": "us-east-1"},
+        "resources": [{"name": "key-1"}],
+        # 0 and False are real values and must survive.
+        "unmapped": {"action": {"api": "ListBuckets", "errorCode": "AccessDenied", "count": 0, "archived": False}},
+    }
+
+
 def test_not_found_is_safe(run_analyzer, mocked_api):
     mocked_api.post(
         GQL_URL,

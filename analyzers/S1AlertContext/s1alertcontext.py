@@ -34,6 +34,18 @@ MAX_RELATED = 20
 MAX_TAGS = 20
 
 LIMITS = {"command_line": MAX_COMMAND_LINE, "result": MAX_PURPLE_RESULT}
+# S1's own bookkeeping in the OCSF rawData; it eats the raw_data budget and tells triage nothing.
+RAW_DATA_NOISE = {"default_value_fields", "s1_metadata", "internal_uid"}
+
+
+def _prune(value):
+    """Drop S1 noise keys and empty values (None, "", [], {}) from rawData, recursively."""
+    if isinstance(value, dict):
+        value = {k: _prune(v) for k, v in value.items() if k not in RAW_DATA_NOISE}
+        return {k: v for k, v in value.items() if v not in (None, "", [], {})}
+    if isinstance(value, list):
+        return [v for v in (_prune(v) for v in value) if v not in (None, "", [], {})]
+    return value
 OBSERVABLE = "{ type typeName name value }"
 _ALERT_FIELDS = f"""id externalId name description severity status confidenceLevel classification analystVerdict
     detectionSource {{ product vendor }}
@@ -248,7 +260,7 @@ class S1AlertContextAnalyzer(Analyzer):
 
         ai = (investigations or [None])[0] or {}
         raw_data = alert.get("rawData")
-        raw_data = "" if raw_data is None else json.dumps(raw_data, separators=(",", ":"), ensure_ascii=False)
+        raw_data = "" if raw_data is None else json.dumps(_prune(raw_data), separators=(",", ":"), ensure_ascii=False)
         purple = self._clean(
             {
                 "status": ai.get("status"),
