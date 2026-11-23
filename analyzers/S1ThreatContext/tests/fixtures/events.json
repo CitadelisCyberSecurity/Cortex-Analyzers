@@ -1,0 +1,14 @@
+{
+    "pagination": {"nextCursor": null, "totalItems": null},
+    "data": [
+        {"objectType": "process", "createdAt": "2026-11-20T10:00:05.000Z", "processName": "cmd.exe", "pid": "4120", "parentProcessName": "invoice.exe", "processUserName": "EXAMPLE\\user1", "processCmd": "cmd.exe /c whoami", "processImageSha1Hash": "1111111111111111111111111111111111111111"},
+        {"objectType": "process", "createdAt": "2026-11-20T10:00:01.000Z", "processName": "invoice.exe", "pid": "3880", "parentProcessName": "explorer.exe", "processUserName": "EXAMPLE\\user1", "processCmd": "invoice.exe /silent", "processImageSha1Hash": "da39a3ee5e6b4b0d3255bfef95601890afd80709"},
+        {"objectType": "ip", "createdAt": "2026-11-20T10:00:07.000Z", "processName": "invoice.exe", "direction": "OUTGOING", "srcIp": "192.0.2.10", "srcPort": 50123, "dstIp": "203.0.113.5", "dstPort": 443},
+        {"objectType": "ip", "createdAt": "2026-11-20T10:00:08.000Z", "processName": "invoice.exe", "direction": "INCOMING", "srcIp": "198.51.100.9", "srcPort": 4444, "dstIp": "192.0.2.10", "dstPort": 50200},
+        {"objectType": "dns", "createdAt": "2026-11-20T10:00:06.000Z", "processName": "invoice.exe", "dnsRequest": "c2.example.test", "dnsResponse": "type: 1 203.0.113.5;"},
+        {"objectType": "file", "createdAt": "2026-11-20T10:00:09.000Z", "processName": "invoice.exe", "eventType": "File Creation", "fileFullName": "C:\\Users\\user1\\AppData\\Roaming\\svc.dll", "fileSha1": "2222222222222222222222222222222222222222"},
+        {"objectType": "file", "createdAt": "2026-11-20T10:00:10.000Z", "processName": "invoice.exe", "eventType": "File Deletion", "fileFullName": "C:\\Users\\user1\\Downloads\\invoice.exe"},
+        {"objectType": "registry", "createdAt": "2026-11-20T10:00:11.000Z", "processName": "invoice.exe", "eventType": "Registry Value Modified", "registryPath": "MACHINE\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Run\\svc"},
+        {"objectType": "scheduled_task", "createdAt": "2026-11-20T10:00:12.000Z", "processName": "invoice.exe", "taskName": "ignored"}
+    ]
+}

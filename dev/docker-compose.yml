@@ -70,5 +70,10 @@ services:
     build: ../analyzers/VPNAPI
     image: ghcr.io/citadeliscybersecurity/vpnapi:devel
 
+  s1threatcontext:
+    profiles: [analyzers]
+    build: ../analyzers/S1ThreatContext
+    image: ghcr.io/citadeliscybersecurity/s1threatcontext:devel
+
 volumes:
   es-data:
