@@ -1,0 +1,28 @@
+{
+    "pagination": {"nextCursor": null, "totalItems": 1},
+    "data": [
+        {
+            "id": "1800000000000000001",
+            "threatInfo": {
+                "threatId": "1800000000000000001",
+                "threatName": "kworkerd",
+                "classification": "Miner",
+                "confidenceLevel": "suspicious",
+                "analystVerdict": "true_positive",
+                "mitigationStatus": "not_mitigated",
+                "incidentStatus": "in_progress",
+                "storyline": "5F00000000000001",
+                "filePath": "/tmp/.X11-cache/kworkerd",
+                "sha1": "3333333333333333333333333333333333333333",
+                "originatorProcess": "bash",
+                "maliciousProcessArguments": "/tmp/.X11-cache/kworkerd -o pool.example.test:3333 -u wallet0 --donate-level 0",
+                "processUser": "www-data",
+                "classificationSource": "Engine"
+            },
+            "agentDetectionInfo": {
+                "agentOsName": "Ubuntu 22.04.4 LTS",
+                "siteName": "Example Linux Site"
+            }
+        }
+    ]
+}

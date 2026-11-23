@@ -1,0 +1,31 @@
+{
+    "pagination": {"nextCursor": null, "totalItems": 1},
+    "data": [
+        {
+            "id": "1900000000000000002",
+            "threatInfo": {
+                "threatId": "1900000000000000002",
+                "threatName": "PsExec64.exe",
+                "classification": "PUA",
+                "confidenceLevel": "n/a",
+                "analystVerdict": "false_positive",
+                "mitigationStatus": "marked_as_benign",
+                "incidentStatus": "resolved",
+                "storyline": null,
+                "filePath": "C:\\Tools\\PsExec64.exe",
+                "sha1": "",
+                "originatorProcess": null,
+                "maliciousProcessArguments": null,
+                "processUser": ""
+            },
+            "agentRealtimeInfo": {
+                "agentComputerName": "ADMIN-01",
+                "agentOsName": "Windows Server 2022",
+                "siteName": null
+            },
+            "agentDetectionInfo": {
+                "siteName": "Example Servers"
+            }
+        }
+    ]
+}

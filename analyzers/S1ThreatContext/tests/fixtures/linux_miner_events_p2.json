@@ -1,0 +1,12 @@
+{
+    "pagination": {"nextCursor": null, "totalItems": null},
+    "data": [
+        {"objectType": "file", "createdAt": "2026-11-21T03:14:04.000Z", "processName": "sh", "eventType": "File Rename", "fileFullName": "/tmp/.X11-cache/kworkerd", "oldFileName": "/tmp/.X11-cache/kworkerd.part"},
+        {"objectType": "file", "createdAt": "2026-11-21T03:14:05.000Z", "processName": "sh", "eventType": "File Modification", "fileFullName": "/var/spool/cron/crontabs/www-data"},
+        {"objectType": "file", "createdAt": "2026-11-21T03:14:06.000Z", "processName": "s1-agent", "eventType": "File Scan", "fileFullName": "/tmp/.X11-cache/kworkerd"},
+        {"objectType": "process", "createdAt": "2026-11-21T03:14:08.000Z", "processName": "kworkerd", "pid": "2230", "parentProcessName": "sh", "processUserName": "www-data", "processCmd": "/tmp/.X11-cache/kworkerd -o pool.example.test:3333 -u wallet0 --donate-level 0"},
+        {"objectType": "ip", "createdAt": "2026-11-21T03:14:10.000Z", "processName": "kworkerd", "direction": "OUTGOING", "dstIp": "198.51.100.33", "dstPort": 3333},
+        {"objectType": "ip", "createdAt": null, "processName": "sshd", "direction": "INCOMING", "srcIp": "198.51.100.200", "srcPort": 52000, "dstIp": "192.0.2.20", "dstPort": 22},
+        {"objectType": "logins", "createdAt": "2026-11-21T03:20:00.000Z", "loginsUserName": "root"}
+    ]
+}
