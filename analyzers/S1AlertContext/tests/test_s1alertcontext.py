@@ -305,7 +305,7 @@ def test_caps_and_truncation(run_analyzer, mocked_api, load_fixture):
 
     full = output["full"]
     assert len(full["process"]["command_line"]) == 1000
-    assert len(full["raw_data"]) == 4000
+    assert len(full["raw_data"]) == 8000
     assert len(full["purple_ai"]["result"]) == 2000
     assert len(full["indicators"]) == 50
     assert full["truncated"] is True

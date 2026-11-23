@@ -99,7 +99,7 @@ A predicate is left out when its field is null. Not found emits only `Found=Fals
 
 - Every key is always present: lists as `[]`, objects as `{}`, `raw_data` as `""`. Fields S1 doesn't return are left out of the inner objects.
 - `observables` merges the alert-level list with each indicator's list, de-duplicated on (type, value).
-- Size caps: 500 characters per string, 1000 per command line, 2000 for the Purple AI result, 4000 for `raw_data` (empty values and S1 bookkeeping keys `default_value_fields`, `s1_metadata`, `internal_uid` removed, then compact JSON, then cut), and at most 50 indicators, 100 observables, 20 assets and 20 related alerts. `truncated` is true if anything was cut.
+- Size caps: 500 characters per string, 1000 per command line, 2000 for the Purple AI result, 8000 for `raw_data` (empty values and S1 bookkeeping keys `default_value_fields`, `s1_metadata`, `internal_uid` removed, then compact JSON, then cut), and at most 50 indicators, 100 observables, 20 assets and 20 related alerts. `truncated` is true if anything was cut.
 - `indicators` are sorted by time, oldest first.
 
 ### Tests (mocked HTTP, synthetic fixtures)

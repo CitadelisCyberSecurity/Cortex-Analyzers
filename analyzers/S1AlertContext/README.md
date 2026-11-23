@@ -74,7 +74,7 @@ The `full` report always has the same shape:
 - `indicators` are sorted oldest first. `observables` merges the alert's list with each indicator's list and removes duplicates on (type, value).
 - An observable's `type` falls back to `typeName` when `type` is empty.
 - `purple_ai` is `{}` when Purple AI returns nothing or errors (see above).
-- `raw_data` is the source's raw alert as compact JSON, cut to 4000 characters. Before it is cut, empty values and S1's own bookkeeping keys (`default_value_fields`, `s1_metadata`, `internal_uid`) are removed, so more of the source's real detail fits. When it is cut it may not be valid JSON.
+- `raw_data` is the source's raw alert as compact JSON, cut to 8000 characters. Before it is cut, empty values and S1's own bookkeeping keys (`default_value_fields`, `s1_metadata`, `internal_uid`) are removed, so more of the source's real detail fits. When it is cut it may not be valid JSON.
 - Caps: strings are cut to 500 characters, command lines to 1000 and the Purple AI result to 2000. Strings inside lists (such as asset tags) are cut the same way. At most 50 indicators, 100 observables, 20 assets, 20 tags per asset and 20 related alerts are kept. `truncated` is `true` when anything was cut or dropped.
 
 #### Chaining with S1ThreatContext
