@@ -1,0 +1,48 @@
+{
+    "name": "S1AlertContext",
+    "version": "1.0",
+    "author": "Citadelis",
+    "url": "https://github.com/CitadelisCyberSecurity/Cortex-Analyzers",
+    "license": "AGPL-V3",
+    "description": "Look up a SentinelOne Unified Alert Management alert by ID and return its details, related assets and context. Read-only.",
+    "dataTypeList": ["other"],
+    "baseConfig": "S1AlertContext",
+    "command": "S1AlertContext/s1alertcontext.py",
+    "dockerImage": "ghcr.io/citadeliscybersecurity/s1alertcontext:devel",
+    "configurationItems": [
+        {
+            "name": "url",
+            "description": "SentinelOne console base URL, e.g. https://<tenant>.sentinelone.net",
+            "type": "string",
+            "multi": false,
+            "required": true
+        },
+        {
+            "name": "api_token",
+            "description": "Read-only SentinelOne API token (Viewer role or view-only service user)",
+            "type": "string",
+            "multi": false,
+            "required": true
+        },
+        {
+            "name": "timeout",
+            "description": "HTTP request timeout in seconds",
+            "type": "number",
+            "multi": false,
+            "required": false,
+            "defaultValue": 30
+        }
+    ],
+    "config": {
+        "check_tlp": true,
+        "max_tlp": 2,
+        "check_pap": true,
+        "max_pap": 2,
+        "auto_extract": false
+    },
+    "registration_required": true,
+    "subscription_required": true,
+    "free_subscription": false,
+    "integration_type": "external_api",
+    "service_homepage": "https://www.sentinelone.com/"
+}
