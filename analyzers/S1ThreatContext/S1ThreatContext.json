@@ -1,0 +1,56 @@
+{
+    "name": "S1ThreatContext",
+    "version": "1.0",
+    "author": "Citadelis",
+    "url": "https://github.com/CitadelisCyberSecurity/Cortex-Analyzers",
+    "license": "AGPL-V3",
+    "description": "Look up a SentinelOne threat by ID and return its details plus what its storyline did on the endpoint: processes, network connections, DNS lookups, file and registry changes. Read-only.",
+    "dataTypeList": ["other"],
+    "baseConfig": "S1ThreatContext",
+    "command": "S1ThreatContext/s1threatcontext.py",
+    "dockerImage": "ghcr.io/citadeliscybersecurity/s1threatcontext:devel",
+    "configurationItems": [
+        {
+            "name": "url",
+            "description": "SentinelOne console base URL, e.g. https://<tenant>.sentinelone.net",
+            "type": "string",
+            "multi": false,
+            "required": true
+        },
+        {
+            "name": "api_token",
+            "description": "Read-only SentinelOne API token (Viewer role or view-only service user)",
+            "type": "string",
+            "multi": false,
+            "required": true
+        },
+        {
+            "name": "max_events",
+            "description": "Hard cap on the number of storyline events returned",
+            "type": "number",
+            "multi": false,
+            "required": false,
+            "defaultValue": 50
+        },
+        {
+            "name": "timeout",
+            "description": "HTTP request timeout in seconds",
+            "type": "number",
+            "multi": false,
+            "required": false,
+            "defaultValue": 30
+        }
+    ],
+    "config": {
+        "check_tlp": true,
+        "max_tlp": 2,
+        "check_pap": true,
+        "max_pap": 2,
+        "auto_extract": false
+    },
+    "registration_required": true,
+    "subscription_required": true,
+    "free_subscription": false,
+    "integration_type": "external_api",
+    "service_homepage": "https://www.sentinelone.com/"
+}

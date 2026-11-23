@@ -1,0 +1,33 @@
+{
+    "pagination": {"nextCursor": null, "totalItems": 1},
+    "data": [
+        {
+            "id": "1234567890123456789",
+            "threatInfo": {
+                "threatId": "1234567890123456789",
+                "threatName": "invoice.exe",
+                "classification": "Trojan",
+                "confidenceLevel": "malicious",
+                "analystVerdict": "undefined",
+                "mitigationStatus": "mitigated",
+                "incidentStatus": "unresolved",
+                "storyline": "ABCDEF0123456789",
+                "filePath": "\\Device\\HarddiskVolume3\\Users\\user1\\Downloads\\invoice.exe",
+                "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
+                "originatorProcess": "explorer.exe",
+                "maliciousProcessArguments": "\"C:\\Users\\user1\\Downloads\\invoice.exe\" /silent",
+                "processUser": "EXAMPLE\\user1",
+                "md5": null
+            },
+            "agentRealtimeInfo": {
+                "agentComputerName": "WS-0001",
+                "agentOsName": "Windows 11 Pro",
+                "siteName": "Example Site"
+            },
+            "agentDetectionInfo": {
+                "agentOsName": "Windows 10",
+                "siteName": "Old Site"
+            }
+        }
+    ]
+}

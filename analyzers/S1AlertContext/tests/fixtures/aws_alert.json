@@ -1,0 +1,50 @@
+{
+  "data": {
+    "alert": {
+      "id": "018e1efe-0000-7000-8000-0000000000aa",
+      "externalId": "aws-finding-0001",
+      "name": "IAM access key used from unusual location",
+      "description": "An access key was used from a new network.",
+      "severity": "MEDIUM",
+      "status": "IN_PROGRESS",
+      "confidenceLevel": null,
+      "classification": "UNKNOWN",
+      "analystVerdict": "UNDEFINED",
+      "detectionSource": {"product": "AWS GuardDuty", "vendor": "Amazon"},
+      "attackSurfaces": ["CLOUD"],
+      "detectedAt": "2026-11-21T08:00:00.000Z",
+      "firstSeenAt": null,
+      "lastSeenAt": null,
+      "storylineId": null,
+      "selfLink": "https://console.example.test/alerts/018e1efe-0000-7000-8000-0000000000aa",
+      "assets": [
+        {
+          "name": "ci-deploy-user",
+          "category": "Identity",
+          "subcategory": "IAM User",
+          "osVersion": null,
+          "lastLoggedInUser": null,
+          "agentUuid": null,
+          "primary": true,
+          "tags": [{"key": "account", "value": "123456789012"}]
+        }
+      ],
+      "indicators": [
+        {
+          "eventTime": "2026-11-21T07:59:00.000Z",
+          "title": "ConsoleLogin",
+          "type": "CLOUD",
+          "severity": "MEDIUM",
+          "description": null,
+          "attacks": [],
+          "observables": [{"type": "IP_ADDRESS", "typeName": "IP Address", "name": "src_ip", "value": "198.51.100.23"}]
+        }
+      ],
+      "observables": [],
+      "process": null,
+      "relatedAlerts": [],
+      "rawData": {"eventName": "ConsoleLogin", "sourceIPAddress": "198.51.100.23", "region": "us-east-1"}
+    },
+    "aiInvestigations": []
+  }
+}
