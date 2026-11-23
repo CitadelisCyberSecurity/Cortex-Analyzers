@@ -66,7 +66,7 @@ If `aiInvestigations` returns errors but `alert` came back (for example, no Purp
 | `Product` | `info` | `detectionSource.product` (EDR, Identity, STAR, AWS …) |
 | `Status` | `info` | `status` |
 | `Verdict` | `info` | `analystVerdict` |
-| `PurpleAI` | `malicious` for TRUE_POSITIVE, `safe` for FALSE_POSITIVE, otherwise `info` | AI verdict; only when its status is COMPLETED |
+| `PurpleAI` | `info` (Purple AI's opinion never sets the alert's level) | AI verdict; only when its status is COMPLETED |
 | `Indicators` | `info` | number of indicators |
 
 A predicate is left out when its field is null. Not found emits only `Found=False`.
