@@ -189,6 +189,8 @@ def test_purple_ai_error_nulls_data_then_retries_alert_only(run_analyzer, mocked
     assert output["full"]["purple_ai"] == {}
     assert output["full"]["found"] is True
     assert len(mocked_api.calls) == 2
+    first = json.loads(mocked_api.calls[0].request.body)
+    assert first == {"query": analyzer_class.QUERY, "variables": {"id": ID}}
     second = json.loads(mocked_api.calls[1].request.body)
     assert second == {"query": analyzer_class.ALERT_ONLY_QUERY, "variables": {"id": ID}}
 
@@ -289,6 +291,17 @@ def test_caps_and_truncation(run_analyzer, mocked_api, load_fixture):
     assert full["truncated"] is True
     # The Indicators taxonomy counts the indicators kept in the report.
     assert tax("info", "Indicators", 50) in output["summary"]["taxonomies"]
+
+
+def test_long_tag_value_is_cut(run_analyzer, mocked_api, load_fixture):
+    body = load_fixture("edr_alert.json")
+    body["data"]["alert"]["assets"][0]["tags"] = [{"key": "k", "value": "v" * 700}]
+    mocked_api.post(GQL_URL, json=body)
+
+    full = run_analyzer(ID)["full"]
+
+    assert len(full["assets"][0]["tags"][0]) == 500
+    assert full["truncated"] is True
 
 
 def test_read_only_single_fixed_query(run_analyzer, mocked_api, analyzer_class, load_fixture):

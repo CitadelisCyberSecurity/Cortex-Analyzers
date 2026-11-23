@@ -7,7 +7,7 @@ Looks up a [SentinelOne](https://www.sentinelone.com/) Unified Alert Management 
 It only reads, but it is an exception to this repo's GET-only habit: UAM is GraphQL-only, so every request is a `POST /web/api/v2.1/unifiedalerts/graphql`. Queries and mutations share that endpoint, so the guardrails are:
 
 - The query text is hard-coded. The alert ID goes in only as a GraphQL variable and is never put into the query text.
-- Usually there is one POST, with the fixed `QUERY` (the alert and its Purple AI investigation). `alert` and `aiInvestigations` are non-null in the schema, so a Purple AI error (for example, no Purple AI license) nulls the whole response. Only in that case the analyzer sends one retry with a second fixed query, `ALERT_ONLY_QUERY`, which asks for the alert fields only, and reports `purple_ai: {}`.
+- Usually there is one POST, with the fixed `QUERY` (the alert and its Purple AI investigation). `alert` and `aiInvestigations` are non-null in the schema, so a Purple AI error (for example, no Purple AI license) nulls the whole response. The analyzer sends one retry, and only when the response `data` is null and every error is on `aiInvestigations`, with a second fixed query, `ALERT_ONLY_QUERY`, which asks for the alert fields only, and reports `purple_ai: {}`.
 - No mutation is ever sent. A test asserts the request bodies.
 - The token should be a service user with view-only permission on Unified Alerts, so it couldn't change anything even if the code tried.
 
@@ -72,9 +72,10 @@ The `full` report always has the same shape:
 
 - Every key is always present: lists as `[]`, objects as `{}`, `raw_data` as `""`. Fields S1 doesn't return are left out of the inner objects. When the alert isn't found, `found` is `false` and everything else is empty.
 - `indicators` are sorted oldest first. `observables` merges the alert's list with each indicator's list and removes duplicates on (type, value).
+- An observable's `type` falls back to `typeName` when `type` is empty.
 - `purple_ai` is `{}` when Purple AI returns nothing or errors (see above).
 - `raw_data` is the source's raw alert as compact JSON, cut to 4000 characters. When it is cut it may not be valid JSON.
-- Caps: strings are cut to 500 characters, command lines to 1000 and the Purple AI result to 2000. At most 50 indicators, 100 observables, 20 assets and 20 related alerts are kept. `truncated` is `true` when anything was cut or dropped.
+- Caps: strings are cut to 500 characters, command lines to 1000 and the Purple AI result to 2000. Strings inside lists (such as asset tags) are cut the same way. At most 50 indicators, 100 observables, 20 assets, 20 tags per asset and 20 related alerts are kept. `truncated` is `true` when anything was cut or dropped.
 
 #### Chaining with S1ThreatContext
 

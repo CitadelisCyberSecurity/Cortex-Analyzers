@@ -6,8 +6,9 @@ alert's details, assets, indicators, observables, process, Purple AI's
 investigation and the source's raw alert, in one shape for every source.
 
 UAM is GraphQL only, so this analyzer POSTs. It is read-only by construction:
-it sends one hard-coded query document, the alert ID travels only as a
-variable, and a test asserts the request body.
+it sends one of two hard-coded query documents (the second is a single
+retry without Purple AI), the alert ID travels only as a variable, and a test
+asserts every request body.
 
 API: POST <console>/web/api/v2.1/unifiedalerts/graphql
 """
@@ -30,6 +31,7 @@ MAX_INDICATORS = 50
 MAX_OBSERVABLES = 100
 MAX_ASSETS = 20
 MAX_RELATED = 20
+MAX_TAGS = 20
 
 LIMITS = {"command_line": MAX_COMMAND_LINE, "result": MAX_PURPLE_RESULT}
 OBSERVABLE = "{ type typeName name value }"
@@ -143,9 +145,14 @@ class S1AlertContextAnalyzer(Analyzer):
         return items[:limit]
 
     def _clean(self, record):
-        """Drop empty fields and cut long strings (command lines get more room)."""
+        """Drop empty fields and cut long strings, also inside lists (command lines get more room)."""
+        def cut(k, v):
+            if isinstance(v, list):
+                return [self._cut(x, LIMITS.get(k, MAX_STRING)) for x in v]
+            return self._cut(v, LIMITS.get(k, MAX_STRING))
+
         return {
-            k: self._cut(v, LIMITS.get(k, MAX_STRING))
+            k: cut(k, v)
             for k, v in record.items()
             if v not in (None, "", [])
         }
@@ -175,7 +182,7 @@ class S1AlertContextAnalyzer(Analyzer):
         )
 
     def _asset(self, a):
-        tags = [f"{t.get('key')}={t.get('value')}" for t in a.get("tags") or []]
+        tags = self._cap([f"{t.get('key')}={t.get('value')}" for t in a.get("tags") or []], MAX_TAGS)
         return self._clean(
             {
                 "name": a.get("name"),
@@ -291,12 +298,15 @@ class S1AlertContextAnalyzer(Analyzer):
             data = body.get("data")
         data = data if isinstance(data, dict) else {}
         alert = data.get("alert")
+        # With alert present, all partial errors are ignored: aiInvestigations
+        # errors and errors under nullable alert.* fields alike.
         if alert is not None:
             return self._report(alert, data.get("aiInvestigations"))
 
         messages = [str(e.get("message", "")) for e in errors]
         # shortcut: not-found detection matches error text, and the Purple AI null-propagation
-        # retry assumes the schema's non-null behaviour; confirm both against a real tenant response
+        # retry assumes the schema's non-null behaviour; confirm both against a real tenant response.
+        # Also check how S1 sends rawData: if it is a JSON string, json.dumps double-encodes it.
         if any(
             first_path(e) in (None, "alert") and re.search("not found", str(e.get("message", "")), re.IGNORECASE)
             for e in errors

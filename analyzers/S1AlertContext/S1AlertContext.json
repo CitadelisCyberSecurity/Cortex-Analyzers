@@ -19,7 +19,7 @@
         },
         {
             "name": "api_token",
-            "description": "Read-only SentinelOne API token (Viewer role or view-only service user)",
+            "description": "Read-only SentinelOne API token (service user with view-only Unified Alerts permission)",
             "type": "string",
             "multi": false,
             "required": true

@@ -26,8 +26,8 @@ The SOC pipeline only sees SentinelOne endpoint threats, through the threat webh
 
 - UAM is GraphQL only: `POST <console>/web/api/v2.1/unifiedalerts/graphql`. Queries and mutations share that endpoint, so this analyzer is an approved exception to the GET-only rule, with these guardrails:
   1. The token is a service user with **view** permission only on Unified Alerts.
-  2. The code sends one hard-coded `query` document. The alert ID goes in as a GraphQL variable and is never spliced into the query text.
-  3. A test asserts that every request is a POST to the GraphQL path whose body is exactly that query document, and that no body contains `mutation`.
+  2. The code sends one of two hard-coded `query` documents. The alert ID goes in as a GraphQL variable and is never spliced into the query text.
+  3. A test asserts that every request is a POST to the GraphQL path whose body is exactly one of those two documents, and that no body contains `mutation`.
 - Repo conventions (ProxyCheck / S1ThreatContext): scaffold with `utils/new-analyzer.py`, all HTTP in `_request()`, a User-Agent, the token redacted from every error, `"token"` added to cortexutils' secret phrases, mocked HTTP and synthetic fixtures only.
 - Auth header: `Authorization: ApiToken <token>`, as in S1's own curl example for this endpoint.
 
@@ -43,7 +43,7 @@ The SOC pipeline only sees SentinelOne endpoint threats, through the threat webh
 
 **Config:** `url` (required, must be `https://`), `api_token` (required, view-only), `timeout` (default 30).
 
-**One request**, with both root fields in one query document:
+**One request normally**, with both root fields in one query document:
 
 ```graphql
 query S1AlertContext($id: ID!) {
@@ -53,6 +53,8 @@ query S1AlertContext($id: ID!) {
 ```
 
 If `aiInvestigations` returns errors but `alert` came back (for example, no Purple AI license), the report still succeeds with `purple_ai: {}`.
+
+**Retry ruling.** `alert` and `aiInvestigations` are non-null in the schema, so a Purple AI error (no license, say) nulls the whole `data`. Because of that, one retry is allowed with a second fixed document, `ALERT_ONLY_QUERY` (the alert fields only). It fires only when `data` is null and every error has `path[0] == "aiInvestigations"`. The retry reports `purple_ai: {}`. There are never more than two POSTs per job.
 
 **Not found:** if `data.alert` is null and the errors say the alert wasn't found, the job succeeds with `Found=False` / `safe` and empty lists. Any other GraphQL error fails the job, with the token redacted from the message. *(The error text for "not found" has to be checked against the real tenant.)*
 
@@ -88,7 +90,7 @@ A predicate is left out when its field is null. Not found emits only `Found=Fals
   "indicators":   [{"time": "…", "title": "…", "type": "…", "severity": "…", "description": "…", "mitre": ["TA0005 Stealth / T1027 Obfuscated Files or Information"]}],
   "observables":  [{"type": "IP", "name": "…", "value": "…"}],
   "process":      {"command_line": "…", "parent": "…", "user": "…", "file_path": "…", "sha1": "…", "sha256": "…"},
-  "purple_ai":    {"status": "COMPLETED", "verdict": "TRUE_POSITIVE", "result": "…"},
+  "purple_ai":    {"status": "COMPLETED", "verdict": "TRUE_POSITIVE", "result": "…", "timestamp": "…"},
   "related_alerts": [{"id": "…", "name": "…"}],
   "raw_data": "…",
   "truncated": false
@@ -109,7 +111,7 @@ A predicate is left out when its field is null. Not found emits only `Found=Fals
 - A GraphQL error with no data fails, without the token in the message.
 - Bad IDs (spaces, quotes, braces) are rejected with no request made.
 - Caps and `truncated`.
-- Read-only guard: exactly one POST per job, the body is the fixed query, the ID is only in `variables`, and no body contains `mutation`.
+- Read-only guard: at most two POSTs per job, each body one of the two fixed documents, the ID is only in `variables`, and no body contains `mutation`.
 - The template's error-path tests: 401/403, 429, 5xx, timeout, TLP, redaction.
 
 ## Left to the builder
