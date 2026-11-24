@@ -164,6 +164,8 @@ jobs:
             # Runtime stage
             echo "# Runtime stage" >> "$dockerfile_path"
             echo "FROM python:3-slim" >> "$dockerfile_path"
+            # The base image lags Debian security fixes, so upgrade OS packages.
+            echo "RUN apt-get update && apt-get upgrade -y && rm -rf /var/lib/apt/lists/*" >> "$dockerfile_path"
             # pip is only needed to build; Trivy flags the libraries it vendors.
             echo "RUN pip uninstall -y pip && rm -rf /usr/local/lib/python3*/ensurepip" >> "$dockerfile_path"
 
@@ -340,6 +342,8 @@ jobs:
           output: trivy.sarif
           vuln-type: 'os'
           severity: 'CRITICAL,HIGH'
+          # Without this, SARIF output ignores the severity filter and uploads Medium/Low too.
+          limit-severities-for-sarif: true
           exit-code: 0
           ignore-unfixed: true
           timeout: 10m
@@ -361,6 +365,7 @@ jobs:
           output: trivy-lib.sarif
           vuln-type: 'library'
           severity: 'CRITICAL,HIGH,MEDIUM'
+          limit-severities-for-sarif: true
           exit-code: 0
           ignore-unfixed: true
           timeout: 10m
